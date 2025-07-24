@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     
     // Main App Screens
     object Home : Screen("home")
+    object Dashboard : Screen("dashboard")
     object Marketplace : Screen("marketplace")
     object MyFowls : Screen("my_fowls")
     object Profile : Screen("profile")

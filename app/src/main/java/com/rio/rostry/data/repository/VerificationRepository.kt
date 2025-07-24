@@ -3,6 +3,7 @@ package com.rio.rostry.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.rio.rostry.data.local.dao.VerificationDao
+import com.rio.rostry.data.local.dao.WalletDao
 import com.rio.rostry.data.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -16,7 +17,7 @@ class VerificationRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage,
     private val verificationDao: VerificationDao,
-    private val walletRepository: WalletRepository
+    private val walletDao: WalletDao
 ) {
     
     suspend fun submitVerificationRequest(
@@ -32,9 +33,9 @@ class VerificationRepository @Inject constructor(
             val requestId = UUID.randomUUID().toString()
             
             // Check if user has sufficient coins
-            val coinPricing = walletRepository.getCoinPricing()
+            val coinPricing = getCoinPricing()
             val requiredCoins = coinPricing.verificationFee
-            val currentBalance = walletRepository.getCoinBalance(userId)
+            val currentBalance = getCoinBalance(userId)
             
             if (currentBalance < requiredCoins) {
                 return Result.failure(InsufficientCoinsException("Insufficient coins for verification. Required: $requiredCoins, Available: $currentBalance"))
@@ -63,7 +64,7 @@ class VerificationRepository @Inject constructor(
             )
             
             // Deduct coins
-            walletRepository.deductCoins(
+            deductCoins(
                 userId = userId,
                 amount = requiredCoins,
                 description = "Verification request - ${verificationType.name}",
@@ -110,7 +111,7 @@ class VerificationRepository @Inject constructor(
             
             // If rejected, refund coins
             if (status == VerificationStatus.REJECTED) {
-                walletRepository.addCoins(
+                addCoins(
                     userId = request.userId,
                     amount = request.coinsDeducted,
                     description = "Verification rejected - refund",
@@ -211,7 +212,89 @@ class VerificationRepository @Inject constructor(
     }
     
     suspend fun getVerificationCost(verificationType: VerificationType): Int {
-        val coinPricing = walletRepository.getCoinPricing()
+        val coinPricing = getCoinPricing()
         return coinPricing.verificationFee
+    }
+    
+    // Wallet operations (simplified to avoid circular dependency)
+    private suspend fun getCoinBalance(userId: String): Int {
+        return try {
+            val snapshot = firestore.collection("wallets").document(userId).get().await()
+            snapshot.toObject(Wallet::class.java)?.coinBalance ?: 0
+        } catch (e: Exception) {
+            walletDao.getCoinBalance(userId) ?: 0
+        }
+    }
+    
+    private suspend fun deductCoins(
+        userId: String, 
+        amount: Int, 
+        description: String,
+        relatedEntityId: String? = null,
+        relatedEntityType: String? = null
+    ): Result<Unit> {
+        return try {
+            firestore.runTransaction { transaction ->
+                val walletRef = firestore.collection("wallets").document(userId)
+                val walletSnapshot = transaction.get(walletRef)
+                
+                val currentWallet = walletSnapshot.toObject(Wallet::class.java) 
+                    ?: Wallet(userId = userId)
+                
+                if (currentWallet.coinBalance < amount) {
+                    throw InsufficientCoinsException("Insufficient coins")
+                }
+                
+                val newBalance = currentWallet.coinBalance - amount
+                val updatedWallet = currentWallet.copy(
+                    coinBalance = newBalance,
+                    totalCoinsSpent = currentWallet.totalCoinsSpent + amount,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                
+                transaction.set(walletRef, updatedWallet)
+                null
+            }.await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    private suspend fun addCoins(
+        userId: String, 
+        amount: Int, 
+        description: String,
+        relatedEntityId: String? = null,
+        relatedEntityType: String? = null
+    ): Result<Unit> {
+        return try {
+            firestore.runTransaction { transaction ->
+                val walletRef = firestore.collection("wallets").document(userId)
+                val walletSnapshot = transaction.get(walletRef)
+                
+                val currentWallet = walletSnapshot.toObject(Wallet::class.java) 
+                    ?: Wallet(userId = userId)
+                
+                val newBalance = currentWallet.coinBalance + amount
+                val updatedWallet = currentWallet.copy(
+                    coinBalance = newBalance,
+                    totalCoinsEarned = currentWallet.totalCoinsEarned + amount,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                
+                transaction.set(walletRef, updatedWallet)
+                null
+            }.await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    private fun getCoinPricing(): CoinPricing {
+        return CoinPricing()
     }
 }

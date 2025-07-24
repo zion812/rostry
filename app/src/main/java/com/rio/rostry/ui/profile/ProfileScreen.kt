@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import com.rio.rostry.data.model.UserRole
 fun ProfileScreen(
     onNavigateToEditProfile: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onNavigateToChat: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,6 +51,15 @@ fun ProfileScreen(
         // Top App Bar
         TopAppBar(
             title = { Text("Profile") },
+            navigationIcon = {
+                IconButton(onClick = onNavigateToChat) {
+                    Icon(
+                        Icons.Default.Email,
+                        contentDescription = "Chat",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
             actions = {
                 IconButton(onClick = onNavigateToEditProfile) {
                     Icon(Icons.Default.Edit, contentDescription = "Edit Profile")

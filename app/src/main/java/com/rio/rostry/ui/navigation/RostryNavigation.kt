@@ -37,6 +37,7 @@ import com.rio.rostry.ui.cart.CartScreen
 import com.rio.rostry.ui.verification.VerificationScreen
 import com.rio.rostry.ui.wallet.WalletScreen
 import com.rio.rostry.ui.showcase.ShowcaseScreen
+import com.rio.rostry.ui.dashboard.DashboardScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +101,7 @@ fun MainApp(
     // Determine if we should show bottom navigation
     val showBottomNav = when (currentDestination?.route) {
         Screen.Home.route,
+        Screen.Dashboard.route,
         Screen.Marketplace.route,
         Screen.MyFowls.route,
         Screen.Chat.route,
@@ -143,7 +145,19 @@ fun MainApp(
                 HomeScreen(
                     onNavigateToMarketplace = { navController.navigate(Screen.Marketplace.route) },
                     onNavigateToMyFowls = { navController.navigate(Screen.MyFowls.route) },
-                    onNavigateToCreatePost = { navController.navigate(Screen.CreatePost.route) }
+                    onNavigateToCreatePost = { navController.navigate(Screen.CreatePost.route) },
+                    onNavigateToDashboard = { navController.navigate(Screen.Dashboard.route) },
+                    onNavigateToChat = { navController.navigate(Screen.Chat.route) }
+                )
+            }
+            
+            composable(Screen.Dashboard.route) {
+                DashboardScreen(
+                    onNavigateToFowlDetail = { fowlId ->
+                        navController.navigate(Screen.FowlDetail.createRoute(fowlId))
+                    },
+                    onNavigateToAddFowl = { navController.navigate(Screen.AddFowl.route) },
+                    onNavigateToMarketplace = { navController.navigate(Screen.Marketplace.route) }
                 )
             }
             
@@ -152,7 +166,8 @@ fun MainApp(
                     onNavigateToFowlDetail = { fowlId ->
                         navController.navigate(Screen.FowlDetail.createRoute(fowlId))
                     },
-                    onNavigateToCart = { navController.navigate(Screen.Cart.route) }
+                    onNavigateToCart = { navController.navigate(Screen.Cart.route) },
+                    onNavigateToChat = { navController.navigate(Screen.Chat.route) }
                 )
             }
             
@@ -179,7 +194,8 @@ fun MainApp(
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
-                    onNavigateToLogin = onLogout
+                    onNavigateToLogin = onLogout,
+                    onNavigateToChat = { navController.navigate(Screen.Chat.route) }
                 )
             }
             

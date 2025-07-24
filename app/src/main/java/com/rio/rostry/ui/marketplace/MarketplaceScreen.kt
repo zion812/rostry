@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun MarketplaceScreen(
     onNavigateToFowlDetail: (String) -> Unit,
     onNavigateToCart: () -> Unit,
+    onNavigateToChat: () -> Unit = {},
     viewModel: MarketplaceViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -37,44 +39,53 @@ fun MarketplaceScreen(
         }
     }
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Marketplace",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            IconButton(onClick = onNavigateToCart) {
-                BadgedBox(
-                    badge = {
-                        if (uiState.cartItemCount > 0) {
-                            Badge {
-                                Text(text = uiState.cartItemCount.toString())
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        "Marketplace",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToChat) {
+                        Icon(
+                            Icons.Default.Email,
+                            contentDescription = "Chat",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToCart) {
+                        BadgedBox(
+                            badge = {
+                                if (uiState.cartItemCount > 0) {
+                                    Badge {
+                                        Text(text = uiState.cartItemCount.toString())
+                                    }
+                                }
                             }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingCart,
+                                contentDescription = "Cart"
+                            )
                         }
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = "Cart"
-                    )
                 }
-            }
+            )
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Search Bar
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -152,6 +163,7 @@ fun MarketplaceScreen(
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
+        }
         }
     }
 }

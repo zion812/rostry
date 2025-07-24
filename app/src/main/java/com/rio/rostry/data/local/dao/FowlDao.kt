@@ -39,4 +39,22 @@ interface FowlDao {
     
     @Query("SELECT * FROM fowls WHERE ownerId = :ownerId")
     suspend fun getFowlsByOwnerSync(ownerId: String): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE id IN (:fowlIds)")
+    suspend fun getFowlsByIds(fowlIds: List<String>): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId AND status = 'deceased' ORDER BY updatedAt DESC")
+    suspend fun getDeceasedFowls(ownerId: String): List<Fowl>
+    
+    @Query("SELECT COUNT(*) FROM fowls WHERE ownerId = :ownerId")
+    suspend fun getFowlCount(ownerId: String): Int
+    
+    @Query("SELECT COUNT(*) FROM fowls WHERE ownerId = :ownerId AND status = 'deceased'")
+    suspend fun getDeceasedCount(ownerId: String): Int
+    
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId AND (motherId = :fowlId OR fatherId = :fowlId)")
+    suspend fun getOffspring(ownerId: String, fowlId: String): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE id = :motherId OR id = :fatherId")
+    suspend fun getParents(motherId: String?, fatherId: String?): List<Fowl>
 }

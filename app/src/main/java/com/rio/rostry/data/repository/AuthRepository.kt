@@ -128,6 +128,10 @@ class AuthRepository @Inject constructor(
         }
     }
     
+    fun getCurrentUserId(): String? {
+        return firebaseAuth.currentUser?.uid
+    }
+    
     private suspend fun saveUserToFirestore(user: User) {
         try {
             firestore.collection("users").document(user.id).set(user).await()

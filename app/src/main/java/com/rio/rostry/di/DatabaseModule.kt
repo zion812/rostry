@@ -23,7 +23,7 @@ object DatabaseModule {
             RostryDatabase::class.java,
             "rostry_database"
         )
-        .addMigrations(RostryDatabase.MIGRATION_1_2, RostryDatabase.MIGRATION_2_3, RostryDatabase.MIGRATION_3_4)
+        .addMigrations(RostryDatabase.MIGRATION_1_2, RostryDatabase.MIGRATION_2_3, RostryDatabase.MIGRATION_3_4, RostryDatabase.MIGRATION_4_5, RostryDatabase.MIGRATION_5_6)
         .fallbackToDestructiveMigration() // Allow destructive migration for development
         .build()
     }
@@ -91,5 +91,10 @@ object DatabaseModule {
     @Provides
     fun provideShowcaseDao(database: RostryDatabase): ShowcaseDao {
         return database.showcaseDao()
+    }
+    
+    @Provides
+    fun provideFlockSummaryDao(database: RostryDatabase): FlockSummaryDao {
+        return database.flockSummaryDao()
     }
 }

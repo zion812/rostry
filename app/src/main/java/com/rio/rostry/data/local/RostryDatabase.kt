@@ -25,9 +25,10 @@ import com.rio.rostry.data.model.*
         Wallet::class,
         CoinTransaction::class,
         VerificationRequest::class,
-        ShowcaseSlot::class
+        ShowcaseSlot::class,
+        FlockSummary::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -46,6 +47,7 @@ abstract class RostryDatabase : RoomDatabase() {
     abstract fun walletDao(): WalletDao
     abstract fun verificationDao(): VerificationDao
     abstract fun showcaseDao(): ShowcaseDao
+    abstract fun flockSummaryDao(): FlockSummaryDao
     
     companion object {
         @Volatile
@@ -339,6 +341,27 @@ abstract class RostryDatabase : RoomDatabase() {
             }
         }
         
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create flock_summary table for dashboard functionality
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS flock_summary (
+                        ownerId TEXT PRIMARY KEY NOT NULL,
+                        totalFowls INTEGER NOT NULL,
+                        chicks INTEGER NOT NULL,
+                        juveniles INTEGER NOT NULL,
+                        adults INTEGER NOT NULL,
+                        breeders INTEGER NOT NULL,
+                        forSale INTEGER NOT NULL,
+                        sold INTEGER NOT NULL,
+                        deceased INTEGER NOT NULL,
+                        totalValue REAL NOT NULL,
+                        lastUpdated INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+        
         fun getDatabase(context: Context): RostryDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -347,7 +370,7 @@ abstract class RostryDatabase : RoomDatabase() {
                     "rostry_database"
                 )
                 .fallbackToDestructiveMigration() // Allow destructive migration for development
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 INSTANCE = instance
                 instance

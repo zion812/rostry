@@ -1,11 +1,7 @@
 package com.rio.rostry.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class BottomNavItem(
@@ -21,6 +17,11 @@ val bottomNavItems = listOf(
         screen = Screen.Home
     ),
     BottomNavItem(
+        title = "Dashboard",
+        icon = Icons.Default.Settings,
+        screen = Screen.Dashboard
+    ),
+    BottomNavItem(
         title = "Marketplace",
         icon = Icons.Default.Search,
         screen = Screen.Marketplace
@@ -29,11 +30,6 @@ val bottomNavItems = listOf(
         title = "My Fowls",
         icon = Icons.Default.ShoppingCart,
         screen = Screen.MyFowls
-    ),
-    BottomNavItem(
-        title = "Chat",
-        icon = Icons.Default.Email,
-        screen = Screen.Chat
     ),
     BottomNavItem(
         title = "Profile",
