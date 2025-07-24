@@ -228,67 +228,114 @@ abstract class RostryDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Update users table to add missing columns for monetization features
-                // Check if columns exist before adding them to avoid duplicate column errors
+                // Use a more robust approach to handle schema changes
                 
-                // Helper function to check if column exists
-                fun columnExists(tableName: String, columnName: String): Boolean {
-                    val cursor = database.query("PRAGMA table_info($tableName)")
-                    var exists = false
+                try {
+                    // Get current table schema
+                    val cursor = database.query("PRAGMA table_info(users)")
+                    val existingColumns = mutableSetOf<String>()
+                    
                     while (cursor.moveToNext()) {
-                        val name = cursor.getString(cursor.getColumnIndex("name"))
-                        if (name == columnName) {
-                            exists = true
-                            break
+                        val nameIndex = cursor.getColumnIndex("name")
+                        if (nameIndex >= 0) {
+                            existingColumns.add(cursor.getString(nameIndex))
                         }
                     }
                     cursor.close()
-                    return exists
-                }
-                
-                // Add columns only if they don't exist
-                if (!columnExists("users", "isKycVerified")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN isKycVerified INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "kycDocumentUrl")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN kycDocumentUrl TEXT NOT NULL DEFAULT ''")
-                }
-                if (!columnExists("users", "verificationStatus")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN verificationStatus TEXT NOT NULL DEFAULT 'UNVERIFIED'")
-                }
-                if (!columnExists("users", "verificationBadges")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN verificationBadges TEXT NOT NULL DEFAULT '[]'")
-                }
-                if (!columnExists("users", "coinBalance")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN coinBalance INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "totalCoinsEarned")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN totalCoinsEarned INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "totalCoinsSpent")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN totalCoinsSpent INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "sellerRating")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN sellerRating REAL NOT NULL DEFAULT 0.0")
-                }
-                if (!columnExists("users", "totalSales")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN totalSales INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "joinedDate")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN joinedDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}")
-                }
-                if (!columnExists("users", "isOnline")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN isOnline INTEGER NOT NULL DEFAULT 0")
-                }
-                if (!columnExists("users", "lastSeen")) {
-                    database.execSQL("ALTER TABLE users ADD COLUMN lastSeen INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}")
+                    
+                    // Define columns to add with their SQL
+                    val columnsToAdd = mapOf(
+                        "isKycVerified" to "ALTER TABLE users ADD COLUMN isKycVerified INTEGER NOT NULL DEFAULT 0",
+                        "kycDocumentUrl" to "ALTER TABLE users ADD COLUMN kycDocumentUrl TEXT NOT NULL DEFAULT ''",
+                        "verificationStatus" to "ALTER TABLE users ADD COLUMN verificationStatus TEXT NOT NULL DEFAULT 'UNVERIFIED'",
+                        "verificationBadges" to "ALTER TABLE users ADD COLUMN verificationBadges TEXT NOT NULL DEFAULT '[]'",
+                        "coinBalance" to "ALTER TABLE users ADD COLUMN coinBalance INTEGER NOT NULL DEFAULT 0",
+                        "totalCoinsEarned" to "ALTER TABLE users ADD COLUMN totalCoinsEarned INTEGER NOT NULL DEFAULT 0",
+                        "totalCoinsSpent" to "ALTER TABLE users ADD COLUMN totalCoinsSpent INTEGER NOT NULL DEFAULT 0",
+                        "sellerRating" to "ALTER TABLE users ADD COLUMN sellerRating REAL NOT NULL DEFAULT 0.0",
+                        "totalSales" to "ALTER TABLE users ADD COLUMN totalSales INTEGER NOT NULL DEFAULT 0",
+                        "joinedDate" to "ALTER TABLE users ADD COLUMN joinedDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}",
+                        "isOnline" to "ALTER TABLE users ADD COLUMN isOnline INTEGER NOT NULL DEFAULT 0",
+                        "lastSeen" to "ALTER TABLE users ADD COLUMN lastSeen INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
+                    )
+                    
+                    // Add only missing columns
+                    columnsToAdd.forEach { (columnName, sql) ->
+                        if (!existingColumns.contains(columnName)) {
+                            try {
+                                database.execSQL(sql)
+                            } catch (e: Exception) {
+                                // Log the error but continue with other columns
+                                println("Error adding column $columnName: ${e.message}")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // If there's any error, we'll let the fallbackToDestructiveMigration handle it
+                    throw e
                 }
             }
         }
         
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // This migration handles any remaining schema inconsistencies
-                // No changes needed - just ensuring version consistency
+                // This migration handles any remaining schema inconsistencies for fowls table
+                try {
+                    // Get current fowls table schema
+                    val cursor = database.query("PRAGMA table_info(fowls)")
+                    val existingColumns = mutableSetOf<String>()
+                    
+                    while (cursor.moveToNext()) {
+                        val nameIndex = cursor.getColumnIndex("name")
+                        if (nameIndex >= 0) {
+                            existingColumns.add(cursor.getString(nameIndex))
+                        }
+                    }
+                    cursor.close()
+                    
+                    // Define columns that should exist in fowls table
+                    val requiredColumns = mapOf(
+                        "id" to "TEXT PRIMARY KEY NOT NULL",
+                        "ownerId" to "TEXT NOT NULL DEFAULT ''",
+                        "name" to "TEXT NOT NULL DEFAULT ''",
+                        "breed" to "TEXT NOT NULL DEFAULT ''",
+                        "type" to "TEXT NOT NULL DEFAULT 'CHICKEN'",
+                        "gender" to "TEXT NOT NULL DEFAULT 'UNKNOWN'",
+                        "dateOfBirth" to "INTEGER",
+                        "motherId" to "TEXT",
+                        "fatherId" to "TEXT",
+                        "dateOfHatching" to "INTEGER NOT NULL DEFAULT 0",
+                        "initialCount" to "INTEGER",
+                        "status" to "TEXT NOT NULL DEFAULT 'Growing'",
+                        "weight" to "REAL NOT NULL DEFAULT 0.0",
+                        "color" to "TEXT NOT NULL DEFAULT ''",
+                        "description" to "TEXT NOT NULL DEFAULT ''",
+                        "imageUrls" to "TEXT NOT NULL DEFAULT '[]'",
+                        "proofImageUrl" to "TEXT",
+                        "healthRecords" to "TEXT NOT NULL DEFAULT '[]'",
+                        "isForSale" to "INTEGER NOT NULL DEFAULT 0",
+                        "price" to "REAL NOT NULL DEFAULT 0.0",
+                        "location" to "TEXT NOT NULL DEFAULT ''",
+                        "createdAt" to "INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}",
+                        "updatedAt" to "INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
+                    )
+                    
+                    // Add missing columns to fowls table
+                    requiredColumns.forEach { (columnName, columnDef) ->
+                        if (!existingColumns.contains(columnName) && columnName != "id") {
+                            try {
+                                val alterSql = "ALTER TABLE fowls ADD COLUMN $columnName $columnDef"
+                                database.execSQL(alterSql)
+                            } catch (e: Exception) {
+                                println("Error adding column $columnName to fowls: ${e.message}")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // If there's any error, we'll let the fallbackToDestructiveMigration handle it
+                    println("Error in MIGRATION_4_5: ${e.message}")
+                    throw e
+                }
             }
         }
         

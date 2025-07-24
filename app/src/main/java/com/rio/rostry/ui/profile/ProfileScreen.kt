@@ -6,7 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +39,7 @@ fun ProfileScreen(
         if (uiState.isLoggedOut) {
             // Logout handled by ProfileViewModel - auth state will change automatically
             // causing RostryApp to switch to AuthNavigation
+            onNavigateToLogin()
         }
     }
     
@@ -53,7 +54,7 @@ fun ProfileScreen(
                     Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                 }
                 IconButton(onClick = { showLogoutDialog = true }) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
                 }
             }
         )

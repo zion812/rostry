@@ -30,4 +30,13 @@ interface UserDao {
     
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): User?
+    
+    @Query("SELECT * FROM users WHERE displayName LIKE :query OR email LIKE :query OR id LIKE :query ORDER BY displayName ASC LIMIT 20")
+    suspend fun searchUsers(query: String): List<User>
+    
+    @Query("SELECT * FROM users WHERE id IN (:userIds)")
+    suspend fun getUsersByIds(userIds: List<String>): List<User>
+    
+    @Query("SELECT * FROM users ORDER BY lastSeen DESC LIMIT :limit")
+    suspend fun getRecentUsers(limit: Int): List<User>
 }

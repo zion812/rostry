@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.rio.rostry.ui.theme.RostryTheme
 import com.rio.rostry.ui.navigation.RostryApp
+import com.rio.rostry.ui.navigation.SimpleRostryApp
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

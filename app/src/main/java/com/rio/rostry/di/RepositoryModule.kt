@@ -5,8 +5,10 @@ import com.google.firebase.storage.FirebaseStorage
 import com.rio.rostry.data.local.dao.ChatDao
 import com.rio.rostry.data.local.dao.MessageDao
 import com.rio.rostry.data.local.dao.PostDao
+import com.rio.rostry.data.local.dao.UserDao
 import com.rio.rostry.data.repository.ChatRepository
 import com.rio.rostry.data.repository.PostRepository
+import com.rio.rostry.data.repository.UserRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,5 +38,14 @@ object RepositoryModule {
         storage: FirebaseStorage
     ): PostRepository {
         return PostRepository(postDao, firestore, storage)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideUserRepository(
+        userDao: UserDao,
+        firestore: FirebaseFirestore
+    ): UserRepository {
+        return UserRepository(userDao, firestore)
     }
 }

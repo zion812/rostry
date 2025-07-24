@@ -43,6 +43,21 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = true
+    
+    // Configure kapt options
+    javacOptions {
+        option("-Xmaxerrs", "500")
+    }
+    
+    // Configure kapt arguments
+    arguments {
+        arg("kapt.kotlin.generated", "${layout.buildDirectory.get()}/generated/source/kapt/main")
+    }
+}
+
 dependencies {
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
@@ -100,6 +115,11 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    
+    // Add minimal Hilt test support to avoid kapt errors
+    androidTestImplementation(libs.hilt.android.testing)
+    kaptAndroidTest(libs.hilt.compiler)
+    
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
