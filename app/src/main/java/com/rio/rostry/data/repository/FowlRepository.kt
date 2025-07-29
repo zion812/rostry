@@ -54,7 +54,7 @@ class FowlRepository @Inject constructor(
         }
     }
     
-    fun getFowlsByOwner(ownerId: String): Flow<List<Fowl>> = flow {
+    fun getFowlsByOwnerFlow(ownerId: String): Flow<List<Fowl>> = flow {
         try {
             val snapshot = firestore.collection("fowls")
                 .whereEqualTo("ownerId", ownerId)
@@ -211,6 +211,51 @@ class FowlRepository @Inject constructor(
             Result.success(downloadUrl.toString())
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+    
+    // Additional methods needed by DashboardRepository
+    suspend fun getFowlsByOwner(ownerId: String): List<Fowl> {
+        return try {
+            val snapshot = firestore.collection("fowls")
+                .whereEqualTo("ownerId", ownerId)
+                .get()
+                .await()
+            
+            val fowls = snapshot.documents.mapNotNull { it.toObject(Fowl::class.java) }
+            fowls.forEach { fowlDao.insertFowl(it) }
+            fowls
+        } catch (e: Exception) {
+            fowlDao.getFowlsByOwnerSync(ownerId)
+        }
+    }
+    
+    suspend fun getRecentFowls(ownerId: String, limit: Int): List<Fowl> {
+        return try {
+            val snapshot = firestore.collection("fowls")
+                .whereEqualTo("ownerId", ownerId)
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+            
+            snapshot.documents.mapNotNull { it.toObject(Fowl::class.java) }
+        } catch (e: Exception) {
+            fowlDao.getRecentFowls(ownerId, limit)
+        }
+    }
+    
+    suspend fun getActiveSales(ownerId: String): List<Fowl> {
+        return try {
+            val snapshot = firestore.collection("fowls")
+                .whereEqualTo("ownerId", ownerId)
+                .whereEqualTo("isForSale", true)
+                .get()
+                .await()
+            
+            snapshot.documents.mapNotNull { it.toObject(Fowl::class.java) }
+        } catch (e: Exception) {
+            fowlDao.getActiveSales(ownerId)
         }
     }
 }

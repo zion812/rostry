@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -36,7 +37,7 @@ class ShowcaseViewModel @Inject constructor(
                 val user = authRepository.getCurrentUser()
                 if (user != null) {
                     // Load user's fowls for showcase
-                    fowlRepository.getFowlsByOwner(user.id).collect { fowls ->
+                    fowlRepository.getFowlsByOwnerFlow(user.id).collect { fowls ->
                         _uiState.value = _uiState.value.copy(
                             userFowls = fowls,
                             isLoading = false

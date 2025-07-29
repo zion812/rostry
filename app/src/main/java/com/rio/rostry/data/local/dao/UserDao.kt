@@ -14,7 +14,7 @@ interface UserDao {
     fun getUserByIdFlow(userId: String): Flow<User?>
     
     @Query("SELECT * FROM users")
-    fun getAllUsers(): Flow<List<User>>
+    fun getAllUsersFlow(): Flow<List<User>>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: User)
@@ -39,4 +39,14 @@ interface UserDao {
     
     @Query("SELECT * FROM users ORDER BY lastSeen DESC LIMIT :limit")
     suspend fun getRecentUsers(limit: Int): List<User>
+    
+    // Additional methods needed by UserRepository
+    @Query("SELECT * FROM users WHERE id = :userId")
+    suspend fun getUser(userId: String): User?
+    
+    @Query("SELECT * FROM users WHERE id = :userId")
+    fun getUserFlow(userId: String): Flow<User?>
+    
+    @Query("SELECT * FROM users")
+    suspend fun getAllUsers(): List<User>
 }

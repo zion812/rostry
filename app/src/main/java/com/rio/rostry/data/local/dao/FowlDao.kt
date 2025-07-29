@@ -57,4 +57,17 @@ interface FowlDao {
     
     @Query("SELECT * FROM fowls WHERE id = :motherId OR id = :fatherId")
     suspend fun getParents(motherId: String?, fatherId: String?): List<Fowl>
+    
+    // Additional methods needed by FowlRepository and DashboardRepository
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun getRecentFowls(ownerId: String, limit: Int): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId AND isForSale = 1")
+    suspend fun getActiveSales(ownerId: String): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId AND createdAt BETWEEN :startDate AND :endDate")
+    suspend fun getFowlsCreatedBetween(ownerId: String, startDate: Long, endDate: Long): List<Fowl>
+    
+    @Query("SELECT * FROM fowls WHERE ownerId = :ownerId AND status = 'Sold' AND updatedAt BETWEEN :startDate AND :endDate")
+    suspend fun getFowlsSoldBetween(ownerId: String, startDate: Long, endDate: Long): List<Fowl>
 }

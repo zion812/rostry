@@ -32,10 +32,17 @@ class MyFowlsViewModel @Inject constructor(
             if (currentUser != null) {
                 _uiState.value = _uiState.value.copy(isLoading = true, error = null)
                 
-                fowlRepository.getFowlsByOwner(currentUser.uid).collectLatest { fowls ->
+                try {
+                    fowlRepository.getFowlsByOwnerFlow(currentUser.uid).collectLatest { fowls ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            fowls = fowls
+                        )
+                    }
+                } catch (e: Exception) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        fowls = fowls
+                        error = e.message
                     )
                 }
             } else {
