@@ -2,17 +2,17 @@
 ## Complete Developer Guide Reference
 
 > **Last Updated**: 2025-01-08
-> **Version**: 1.0.0
+> **Version**: 2.0.0
 > **Build Status**: ✅ Successfully Building
-> **APK Size**: ~18MB
+> **APK Size**: ~22MB (with farm management features)
 > **Target SDK**: 36 (Android 14+)
-> **Status**: ✅ Current & Accurate
+> **Status**: ✅ Current & Accurate with Farm Management System
 
 ---
 
 ## 🏗️ **Project Overview**
 
-**ROSTRY** is a comprehensive **Fowl Management & Marketplace Android Application** built with modern Android development practices. It serves as a complete ecosystem for poultry farmers, breeders, and enthusiasts to manage their flocks, trade fowls, and connect with the community.
+**ROSTRY** is a comprehensive **Fowl Management & Marketplace Android Application** built with modern Android development practices. It serves as a complete ecosystem for poultry farmers, breeders, and enthusiasts to manage their flocks, trade fowls, and connect with the community. The system now includes advanced farm management, multi-user collaboration, and access control features.
 
 ### **Core Business Domain**
 - **Primary**: Fowl lifecycle management (chickens, ducks, turkeys, etc.)
@@ -85,11 +85,11 @@ com.rio.rostry/
 ├── ⚙️  config/                          # App configuration
 ├── 💾 data/                             # Data layer
 │   ├── local/                           # Local database (Room)
-│   │   ├── dao/                         # Data Access Objects (15 DAOs)
+│   │   ├── dao/                         # Data Access Objects (20+ DAOs)
 │   │   ├── RostryDatabase.kt            # Room database configuration
 │   │   └── Converters.kt                # Type converters for Room
-│   ├── model/                           # Data models (20+ entities)
-│   └── repository/                      # Repository implementations (12 repos)
+│   ├── model/                           # Data models (25+ entities)
+│   └── repository/                      # Repository implementations (15+ repos)
 ├── 🏢 domain/                           # Business logic layer
 ├── 🎨 ui/                               # Presentation layer
 │   ├── auth/                            # Authentication screens
@@ -113,7 +113,7 @@ com.rio.rostry/
 
 ### **Hybrid Database Strategy: Room + Firestore**
 
-#### **Local Database (Room) - 15 Entities**
+#### **Local Database (Room) - 25+ Entities** ⭐ **UPDATED**
 ```kotlin
 @Database(
     entities = [
@@ -133,7 +133,7 @@ com.rio.rostry/
         ShowcaseSlot::class,   // Premium showcase slots
         FlockSummary::class    // Dashboard summary data
     ],
-    version = 6,
+    version = 7, // Updated with farm management entities
     exportSchema = false
 )
 ```

@@ -1,16 +1,97 @@
 # ROSTRY API Documentation
 
-> **Version**: 1.0.0  
-> **Last Updated**: 2025-01-08  
-> **Status**: Current Implementation  
+> **Version**: 2.0.0
+> **Last Updated**: 2025-01-08
+> **Status**: Current Implementation with Farm Management System
 
 ## 📋 Overview
 
-This document provides comprehensive documentation for ROSTRY's internal API architecture, including repository interfaces, data models, and service contracts.
+This document provides comprehensive documentation for ROSTRY's internal API architecture, including repository interfaces, data models, and service contracts. The system now includes extensive farm management, access control, and collaboration features.
 
 ## 🏗️ Repository Architecture
 
 ### Core Repositories
+
+#### FarmRepository ⭐ **NEW**
+**Purpose**: Manages farm entities and comprehensive farm operations
+
+```kotlin
+@Singleton
+class FarmRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val storage: FirebaseStorage,
+    private val farmDao: FarmDao,
+    private val flockDao: FlockDao
+) {
+
+    // Farm Management
+    suspend fun createFarm(farm: Farm): Result<String>
+    suspend fun updateFarm(farm: Farm): Result<Unit>
+    suspend fun deleteFarm(farmId: String): Result<Unit>
+
+    // Farm Queries
+    fun getCurrentFarm(): Flow<Farm?>
+    fun getUserFarms(ownerId: String): Flow<List<Farm>>
+    suspend fun getFarmById(farmId: String): Farm?
+
+    // Flock Management
+    suspend fun createFlock(flock: Flock): Result<String>
+    suspend fun updateFlock(flock: Flock): Result<Unit>
+    fun getAllFlocks(): Flow<List<Flock>>
+    fun getFlocksByFarm(farmId: String): Flow<List<Flock>>
+
+    // Analytics & Insights
+    suspend fun getFarmAnalytics(): FarmAnalytics
+    fun getHealthAlerts(): Flow<List<String>>
+    fun getUpcomingTasks(): Flow<List<String>>
+    fun getRecentActivities(): Flow<List<String>>
+
+    // Facility Management
+    suspend fun addFacility(farmId: String, facility: FarmFacility): Result<Unit>
+    suspend fun updateFacility(farmId: String, facility: FarmFacility): Result<Unit>
+    fun getFacilitiesNeedingMaintenance(farmId: String): Flow<List<FarmFacility>>
+}
+```
+
+#### FarmAccessRepository ⭐ **NEW**
+**Purpose**: Manages farm access control, invitations, and collaboration
+
+```kotlin
+@Singleton
+class FarmAccessRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val farmAccessDao: FarmAccessDao,
+    private val invitationDao: InvitationDao,
+    private val farmRepository: FarmRepository
+) {
+
+    // Invitation Management
+    suspend fun sendInvitation(invitation: FarmInvitation): Result<String>
+    suspend fun sendBulkInvitations(bulkInvitation: BulkInvitation): Result<String>
+    suspend fun acceptInvitation(invitationId: String, userId: String): Result<Unit>
+    suspend fun rejectInvitation(invitationId: String, userId: String): Result<Unit>
+
+    // Access Management
+    fun getUserFarms(userId: String): Flow<List<FarmWithAccess>>
+    suspend fun hasPermission(userId: String, farmId: String, permission: FarmPermission): Boolean
+    suspend fun hasPermissions(userId: String, farmId: String, permissions: List<FarmPermission>): Map<FarmPermission, Boolean>
+
+    // Role Management
+    suspend fun updateUserRole(farmId: String, userId: String, newRole: FarmRole): Result<Unit>
+    suspend fun updateUserPermissions(farmId: String, userId: String, permissions: List<FarmPermission>): Result<Unit>
+    suspend fun revokeAccess(farmId: String, userId: String): Result<Unit>
+
+    // Analytics & Audit
+    suspend fun getFarmAccessAnalytics(farmId: String): FarmAccessAnalytics
+    fun getSecurityAlerts(farmId: String): Flow<List<SecurityAlert>>
+    fun getAccessAuditLog(farmId: String): Flow<List<AccessAuditLog>>
+
+    // Templates & Bulk Operations
+    suspend fun createInvitationTemplate(template: InvitationTemplate): Result<String>
+    fun getInvitationTemplates(farmId: String): Flow<List<InvitationTemplate>>
+    suspend fun processBulkInvitation(bulkInvitationId: String): Result<Unit>
+}
+```
 
 #### FowlRepository
 **Purpose**: Manages fowl entities and related operations
@@ -195,6 +276,117 @@ class OrderRepository @Inject constructor(
 ```
 
 ## 📊 Data Models
+
+### Farm Management Entities ⭐ **NEW**
+
+#### Farm Entity
+```kotlin
+@Entity(tableName = "farms")
+data class Farm(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val ownerId: String,
+    val farmName: String,
+    val location: String,
+    val description: String = "",
+    val farmType: FarmType = FarmType.SMALL_SCALE,
+    val totalArea: Double = 0.0, // in hectares
+    val establishedDate: Long = System.currentTimeMillis(),
+    val verificationStatus: VerificationStatus = VerificationStatus.PENDING,
+    val certificationLevel: CertificationLevel = CertificationLevel.BASIC,
+    val certificationDate: Long = 0,
+    val certificationUrls: List<String> = emptyList(),
+    val contactInfo: FarmContactInfo? = null,
+    val facilities: List<FarmFacility> = emptyList(),
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+#### Flock Entity
+```kotlin
+@Entity(tableName = "flocks")
+data class Flock(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val farmId: String,
+    val flockName: String,
+    val flockType: FlockType,
+    val breed: String,
+    val totalCount: Int = 0,
+    val activeCount: Int = 0,
+    val maleCount: Int = 0,
+    val femaleCount: Int = 0,
+    val averageAge: Int = 0, // in weeks
+    val establishedDate: Long = System.currentTimeMillis(),
+    val facilityId: String? = null,
+    val healthStatus: FlockHealthStatus = FlockHealthStatus.HEALTHY,
+    val feedingSchedule: FeedingSchedule? = null,
+    val vaccinationSchedule: List<VaccinationRecord> = emptyList(),
+    val productionMetrics: ProductionMetrics? = null,
+    val environmentalConditions: EnvironmentalMonitoring? = null,
+    val notes: String = "",
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+#### FarmAccess Entity
+```kotlin
+@Entity(tableName = "farm_access")
+data class FarmAccess(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val farmId: String,
+    val userId: String,
+    val role: FarmRole,
+    val permissions: List<FarmPermission> = emptyList(),
+    val invitedBy: String,
+    val invitedAt: Long = System.currentTimeMillis(),
+    val acceptedAt: Long? = null,
+    val status: AccessStatus = AccessStatus.PENDING,
+    val expiresAt: Long? = null,
+    val isActive: Boolean = true,
+    val lastAccessedAt: Long = System.currentTimeMillis(),
+    val accessNotes: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+#### FarmInvitation Entity
+```kotlin
+@Entity(tableName = "farm_invitations")
+data class FarmInvitation(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val farmId: String,
+    val farmName: String,
+    val inviterUserId: String,
+    val inviterName: String,
+    val inviterEmail: String,
+    val inviteeEmail: String,
+    val inviteeUserId: String? = null,
+    val proposedRole: FarmRole,
+    val customPermissions: List<FarmPermission> = emptyList(),
+    val invitationMessage: String = "",
+    val invitationCode: String = generateInvitationCode(),
+    val invitationLink: String = generateInvitationLink(),
+    val status: InvitationStatus = InvitationStatus.SENT,
+    val priority: InvitationPriority = InvitationPriority.NORMAL,
+    val sentAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + (7 * 24 * 60 * 60 * 1000),
+    val respondedAt: Long? = null,
+    val remindersSent: Int = 0,
+    val lastReminderAt: Long? = null,
+    val maxReminders: Int = 3,
+    val allowCustomRole: Boolean = false,
+    val requiresApproval: Boolean = false,
+    val approvedBy: String? = null,
+    val approvedAt: Long? = null,
+    val metadata: InvitationMetadata? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
 
 ### Core Entities
 

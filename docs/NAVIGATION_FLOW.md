@@ -1,12 +1,12 @@
 # ROSTRY Navigation Flow Documentation
 
-> **Version**: 1.0.0  
-> **Last Updated**: 2025-01-08  
-> **Navigation Framework**: Navigation Compose  
+> **Version**: 2.0.0
+> **Last Updated**: 2025-01-08
+> **Navigation Framework**: Navigation Compose with Farm Management
 
 ## 📋 Overview
 
-ROSTRY uses Jetpack Navigation Compose for type-safe navigation between screens. This document outlines the complete navigation architecture, screen relationships, and user journey flows.
+ROSTRY uses Jetpack Navigation Compose for type-safe navigation between screens. This document outlines the complete navigation architecture, screen relationships, and user journey flows, including the comprehensive farm management system.
 
 ## 🗺️ Navigation Architecture
 
@@ -51,6 +51,22 @@ sealed class Screen(val route: String) {
     object Verification : Screen("verification")
     object Wallet : Screen("wallet")
     object Showcase : Screen("showcase")
+
+    // Farm Management Screens ⭐ **NEW**
+    object FarmDashboard : Screen("farm_dashboard")
+    object LifecycleAnalytics : Screen("lifecycle_analytics")
+    object LifecycleManagement : Screen("lifecycle_management")
+    object FarmSettings : Screen("farm_settings")
+    object FlockDetail : Screen("flock_detail/{flockId}") {
+        fun createRoute(flockId: String) = "flock_detail/$flockId"
+    }
+    object BreedingManagement : Screen("breeding_management")
+    object FacilityManagement : Screen("facility_management")
+    object UserManagement : Screen("user_management")
+    object DataBackup : Screen("data_backup")
+    object VaccinationManagement : Screen("vaccination_management")
+    object FeedingManagement : Screen("feeding_management")
+    object Reports : Screen("reports")
 }
 ```
 
@@ -165,18 +181,73 @@ graph TD
     A[Home Screen] --> B[Create Post]
     A --> C[Post Interaction]
     A --> D[Chat Icon]
-    
+
     B --> E{Post Created?}
     E -->|Yes| A
     E -->|No| B
-    
+
     C --> F[Comment/Like]
     F --> A
-    
+
     D --> G[Chat List Screen]
     G --> H[Chat Detail Screen]
     H --> I[Send Message]
     I --> H
+```
+
+### 6. Farm Management Flow ⭐ **NEW**
+```mermaid
+graph TD
+    A[Farm Dashboard] --> B[Flock Management]
+    A --> C[Analytics]
+    A --> D[Farm Settings]
+    A --> E[User Management]
+
+    B --> F[Flock Detail]
+    B --> G[Add Flock]
+    F --> H[Health Monitoring]
+    F --> I[Production Metrics]
+    F --> J[Vaccination Schedule]
+
+    C --> K[Lifecycle Analytics]
+    C --> L[Performance Reports]
+    C --> M[Financial Analytics]
+
+    D --> N[Facility Management]
+    D --> O[Certification Management]
+    D --> P[Data Backup]
+
+    E --> Q[Access Control]
+    E --> R[Invitations]
+    E --> S[Role Management]
+    Q --> T[Permission Settings]
+    R --> U[Send Invitations]
+    R --> V[Invitation Templates]
+```
+
+### 7. Farm Access & Collaboration Flow ⭐ **NEW**
+```mermaid
+graph TD
+    A[User Management] --> B[Send Invitation]
+    A --> C[Manage Access]
+    A --> D[View Audit Log]
+
+    B --> E[Select Role]
+    B --> F[Set Permissions]
+    B --> G[Send Email]
+
+    C --> H[Update Role]
+    C --> I[Modify Permissions]
+    C --> J[Revoke Access]
+
+    E --> K[Owner/Manager/Worker]
+    F --> L[25+ Permissions]
+    G --> M[Email Sent]
+
+    M --> N{User Response}
+    N -->|Accept| O[Access Granted]
+    N -->|Reject| P[Invitation Declined]
+    N -->|Expire| Q[Invitation Expired]
 ```
 
 ## 🎯 Screen Specifications
@@ -222,6 +293,52 @@ graph TD
   - Wallet → `"wallet"`
   - Verification → `"verification"`
   - Showcase → `"showcase"`
+
+### Farm Management Screens ⭐ **NEW**
+
+#### 6. Farm Dashboard Screen
+- **Route**: `"farm_dashboard"`
+- **Purpose**: Comprehensive farm overview with real-time metrics
+- **Navigation Options**:
+  - Flock Detail → `"flock_detail/{flockId}"`
+  - Add Fowl → `"add_fowl"`
+  - Analytics → `"lifecycle_analytics"`
+  - Lifecycle Management → `"lifecycle_management"`
+  - Farm Settings → `"farm_settings"`
+
+#### 7. Lifecycle Analytics Screen
+- **Route**: `"lifecycle_analytics"`
+- **Purpose**: Interactive analytics with charts and insights
+- **Navigation Options**:
+  - Back to Dashboard
+  - Detailed Reports → `"reports"`
+
+#### 8. Farm Settings Screen
+- **Route**: `"farm_settings"`
+- **Purpose**: Farm configuration and management
+- **Navigation Options**:
+  - Facility Management → `"facility_management"`
+  - User Management → `"user_management"`
+  - Data Backup → `"data_backup"`
+
+#### 9. User Management Screen
+- **Route**: `"user_management"`
+- **Purpose**: Farm access control and collaboration
+- **Navigation Options**:
+  - Send Invitations
+  - Manage Permissions
+  - View Audit Log
+  - Role Management
+
+#### 10. Flock Detail Screen
+- **Route**: `"flock_detail/{flockId}"`
+- **Parameters**: `flockId: String`
+- **Purpose**: Detailed flock management interface
+- **Navigation Options**:
+  - Vaccination Management → `"vaccination_management"`
+  - Feeding Management → `"feeding_management"`
+  - Health Monitoring
+  - Production Metrics
 
 ### Detail Screens
 

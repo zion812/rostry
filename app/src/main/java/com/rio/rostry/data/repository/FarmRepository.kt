@@ -1,0 +1,554 @@
+package com.rio.rostry.data.repository
+
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import com.rio.rostry.data.local.dao.FarmDao
+import com.rio.rostry.data.local.dao.FlockDao
+import com.rio.rostry.data.model.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Repository for comprehensive farm management
+ * Handles farm data, flock management, and operational analytics
+ */
+@Singleton
+class FarmRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val storage: FirebaseStorage,
+    private val farmDao: FarmDao,
+    private val flockDao: FlockDao
+) {
+
+    // ==================== FARM MANAGEMENT ====================
+
+    /**
+     * Create a new farm
+     */
+    suspend fun createFarm(
+        farmName: String,
+        location: String,
+        farmType: FarmType,
+        ownerId: String,
+        description: String = "",
+        totalArea: Double = 0.0
+    ): Result<String> {
+        return try {
+            val farm = Farm(
+                ownerId = ownerId,
+                farmName = farmName,
+                location = location,
+                farmType = farmType,
+                description = description,
+                totalArea = totalArea
+            )
+
+            // Save to Firestore
+            firestore.collection("farms")
+                .document(farm.id)
+                .set(farm)
+                .await()
+
+            // Save locally
+            farmDao.insertFarm(farm)
+
+            Result.success(farm.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update farm information
+     */
+    suspend fun updateFarm(farm: Farm): Result<Unit> {
+        return try {
+            val updatedFarm = farm.copy(updatedAt = System.currentTimeMillis())
+
+            // Update Firestore
+            firestore.collection("farms")
+                .document(farm.id)
+                .set(updatedFarm)
+                .await()
+
+            // Update locally
+            farmDao.updateFarm(updatedFarm)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get current user's farm
+     */
+    fun getCurrentFarm(): Flow<Farm?> {
+        return farmDao.getCurrentUserFarm() // Assumes user ID is available
+    }
+
+    /**
+     * Get farm by ID
+     */
+    suspend fun getFarmById(farmId: String): Farm? {
+        return farmDao.getFarmById(farmId)
+    }
+
+    /**
+     * Add facility to farm
+     */
+    suspend fun addFacility(farmId: String, facility: FarmFacility): Result<Unit> {
+        return try {
+            val farm = farmDao.getFarmById(farmId)
+                ?: return Result.failure(Exception("Farm not found"))
+
+            val updatedFarm = farm.copy(
+                facilities = farm.facilities + facility,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFarm(updatedFarm)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update facility condition
+     */
+    suspend fun updateFacilityCondition(
+        farmId: String,
+        facilityId: String,
+        condition: FacilityCondition,
+        notes: String = ""
+    ): Result<Unit> {
+        return try {
+            val farm = farmDao.getFarmById(farmId)
+                ?: return Result.failure(Exception("Farm not found"))
+
+            val updatedFacilities = farm.facilities.map { facility ->
+                if (facility.id == facilityId) {
+                    facility.copy(
+                        condition = condition,
+                        notes = notes,
+                        lastMaintenance = if (condition == FacilityCondition.EXCELLENT || condition == FacilityCondition.GOOD) {
+                            System.currentTimeMillis()
+                        } else {
+                            facility.lastMaintenance
+                        }
+                    )
+                } else {
+                    facility
+                }
+            }
+
+            val updatedFarm = farm.copy(
+                facilities = updatedFacilities,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFarm(updatedFarm)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== FLOCK MANAGEMENT ====================
+
+    /**
+     * Create a new flock
+     */
+    suspend fun createFlock(flock: Flock): Result<String> {
+        return try {
+            // Save to Firestore
+            firestore.collection("flocks")
+                .document(flock.id)
+                .set(flock)
+                .await()
+
+            // Save locally
+            flockDao.insertFlock(flock)
+
+            Result.success(flock.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update flock information
+     */
+    suspend fun updateFlock(flock: Flock): Result<Unit> {
+        return try {
+            val updatedFlock = flock.copy(updatedAt = System.currentTimeMillis())
+
+            // Update Firestore
+            firestore.collection("flocks")
+                .document(flock.id)
+                .set(updatedFlock)
+                .await()
+
+            // Update locally
+            flockDao.updateFlock(updatedFlock)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get all flocks for current farm
+     */
+    fun getAllFlocks(): Flow<List<Flock>> {
+        return flockDao.getAllFlocks()
+    }
+
+    /**
+     * Get flock by ID
+     */
+    suspend fun getFlockById(flockId: String): Flock? {
+        return flockDao.getFlockById(flockId)
+    }
+
+    /**
+     * Get flocks by type
+     */
+    fun getFlocksByType(flockType: FlockType): Flow<List<Flock>> {
+        return flockDao.getFlocksByType(flockType)
+    }
+
+    /**
+     * Update flock health status
+     */
+    suspend fun updateFlockHealthStatus(
+        flockId: String,
+        healthStatus: FlockHealthStatus,
+        notes: String = ""
+    ): Result<Unit> {
+        return try {
+            val flock = flockDao.getFlockById(flockId)
+                ?: return Result.failure(Exception("Flock not found"))
+
+            val updatedFlock = flock.copy(
+                healthStatus = healthStatus,
+                notes = if (notes.isNotEmpty()) "$notes\n${flock.notes}" else flock.notes,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFlock(updatedFlock)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Add vaccination record
+     */
+    suspend fun addVaccinationRecord(
+        flockId: String,
+        vaccination: VaccinationRecord
+    ): Result<Unit> {
+        return try {
+            val flock = flockDao.getFlockById(flockId)
+                ?: return Result.failure(Exception("Flock not found"))
+
+            val updatedFlock = flock.copy(
+                vaccinationSchedule = flock.vaccinationSchedule + vaccination,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFlock(updatedFlock)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update feeding schedule
+     */
+    suspend fun updateFeedingSchedule(
+        flockId: String,
+        feedingSchedule: FeedingSchedule
+    ): Result<Unit> {
+        return try {
+            val flock = flockDao.getFlockById(flockId)
+                ?: return Result.failure(Exception("Flock not found"))
+
+            val updatedFlock = flock.copy(
+                feedingSchedule = feedingSchedule,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFlock(updatedFlock)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update production metrics
+     */
+    suspend fun updateProductionMetrics(
+        flockId: String,
+        metrics: ProductionMetrics
+    ): Result<Unit> {
+        return try {
+            val flock = flockDao.getFlockById(flockId)
+                ?: return Result.failure(Exception("Flock not found"))
+
+            val updatedFlock = flock.copy(
+                productionMetrics = metrics,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            updateFlock(updatedFlock)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== ANALYTICS AND MONITORING ====================
+
+    /**
+     * Get farm analytics
+     */
+    fun getFarmAnalytics(): Flow<FarmAnalytics> {
+        return combine(
+            getCurrentFarm(),
+            getAllFlocks()
+        ) { farm, flocks ->
+            calculateFarmAnalytics(farm, flocks)
+        }
+    }
+
+    /**
+     * Get health alerts
+     */
+    fun getHealthAlerts(): Flow<List<String>> {
+        return getAllFlocks().map { flocks ->
+            val alerts = mutableListOf<String>()
+            
+            flocks.forEach { flock ->
+                // Health status alerts
+                when (flock.healthStatus) {
+                    FlockHealthStatus.TREATMENT -> alerts.add("${flock.flockName} under treatment")
+                    FlockHealthStatus.QUARANTINE -> alerts.add("${flock.flockName} quarantined")
+                    FlockHealthStatus.MONITORING -> alerts.add("${flock.flockName} needs monitoring")
+                    else -> {}
+                }
+                
+                // Mortality rate alerts
+                if (flock.getMortalityRate() > 5.0) {
+                    alerts.add("High mortality rate in ${flock.flockName}: ${String.format("%.1f", flock.getMortalityRate())}%")
+                }
+                
+                // Overdue vaccinations
+                if (flock.hasOverdueVaccinations()) {
+                    alerts.add("Overdue vaccinations for ${flock.flockName}")
+                }
+                
+                // Feed conversion ratio alerts
+                flock.productionMetrics?.let { metrics ->
+                    if (metrics.feedConversionRatio > 3.0) {
+                        alerts.add("Poor feed conversion in ${flock.flockName}: ${String.format("%.2f", metrics.feedConversionRatio)}")
+                    }
+                }
+            }
+            
+            alerts
+        }
+    }
+
+    /**
+     * Get upcoming tasks
+     */
+    fun getUpcomingTasks(): Flow<List<String>> {
+        return getAllFlocks().map { flocks ->
+            val tasks = mutableListOf<String>()
+            
+            flocks.forEach { flock ->
+                // Vaccination due soon
+                flock.getNextVaccinationDue()?.let { vaccination ->
+                    if (vaccination.isDueSoon()) {
+                        tasks.add("Vaccination due for ${flock.flockName}: ${vaccination.vaccineName}")
+                    }
+                }
+                
+                // Feeding schedule review
+                flock.feedingSchedule?.let { schedule ->
+                    if (schedule.needsReview()) {
+                        tasks.add("Review feeding schedule for ${flock.flockName}")
+                    }
+                }
+                
+                // Production metrics update
+                flock.productionMetrics?.let { metrics ->
+                    val daysSinceUpdate = (System.currentTimeMillis() - metrics.lastCalculated) / (24 * 60 * 60 * 1000)
+                    if (daysSinceUpdate > 7) {
+                        tasks.add("Update production metrics for ${flock.flockName}")
+                    }
+                }
+            }
+            
+            tasks
+        }
+    }
+
+    /**
+     * Get recent activities
+     */
+    fun getRecentActivities(): Flow<List<String>> {
+        return combine(
+            getAllFlocks(),
+            getCurrentFarm()
+        ) { flocks, farm ->
+            val activities = mutableListOf<String>()
+            
+            // Recent flock updates
+            flocks.sortedByDescending { it.updatedAt }.take(5).forEach { flock ->
+                val daysSinceUpdate = (System.currentTimeMillis() - flock.updatedAt) / (24 * 60 * 60 * 1000)
+                if (daysSinceUpdate < 7) {
+                    activities.add("Updated ${flock.flockName} ${daysSinceUpdate}d ago")
+                }
+            }
+            
+            // Recent vaccinations
+            flocks.forEach { flock ->
+                flock.vaccinationSchedule.sortedByDescending { it.administrationDate }.take(2).forEach { vaccination ->
+                    val daysSinceVaccination = (System.currentTimeMillis() - vaccination.administrationDate) / (24 * 60 * 60 * 1000)
+                    if (daysSinceVaccination < 7) {
+                        activities.add("Vaccinated ${flock.flockName} with ${vaccination.vaccineName} ${daysSinceVaccination}d ago")
+                    }
+                }
+            }
+            
+            activities.take(10)
+        }
+    }
+
+    /**
+     * Mark alert as handled
+     */
+    suspend fun markAlertAsHandled(alert: String): Result<Unit> {
+        return try {
+            // In a real implementation, you would store handled alerts
+            // For now, we'll just return success
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Complete task
+     */
+    suspend fun completeTask(task: String): Result<Unit> {
+        return try {
+            // In a real implementation, you would mark tasks as completed
+            // For now, we'll just return success
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    private fun calculateFarmAnalytics(farm: Farm?, flocks: List<Flock>): FarmAnalytics {
+        val totalFowls = flocks.sumOf { it.activeCount }
+        val totalCapacity = farm?.getTotalCapacity() ?: 0
+        val occupancyRate = farm?.getOccupancyRate() ?: 0.0
+        
+        val healthyFlocks = flocks.count { it.healthStatus == FlockHealthStatus.HEALTHY }
+        val healthScore = if (flocks.isNotEmpty()) {
+            (healthyFlocks.toDouble() / flocks.size) * 100
+        } else 100.0
+        
+        val averageProductionRate = flocks
+            .filter { it.flockType == FlockType.LAYING_HENS }
+            .mapNotNull { it.productionMetrics?.eggProductionRate }
+            .average()
+            .takeIf { !it.isNaN() } ?: 0.0
+        
+        val averageFeedConversion = flocks
+            .mapNotNull { it.productionMetrics?.feedConversionRatio }
+            .filter { it > 0 }
+            .average()
+            .takeIf { !it.isNaN() } ?: 0.0
+        
+        val averageMortalityRate = flocks
+            .map { it.getMortalityRate() }
+            .average()
+            .takeIf { !it.isNaN() } ?: 0.0
+
+        return FarmAnalytics(
+            farmId = farm?.id ?: "",
+            totalFowls = totalFowls,
+            totalFlocks = flocks.size,
+            totalCapacity = totalCapacity,
+            occupancyRate = occupancyRate,
+            healthScore = healthScore,
+            averageProductionRate = averageProductionRate,
+            averageFeedConversion = averageFeedConversion,
+            averageMortalityRate = averageMortalityRate,
+            facilitiesNeedingMaintenance = farm?.getFacilitiesNeedingAttention()?.size ?: 0,
+            lastCalculated = System.currentTimeMillis()
+        )
+    }
+}
+
+/**
+ * Farm analytics data class
+ */
+data class FarmAnalytics(
+    val farmId: String,
+    val totalFowls: Int,
+    val totalFlocks: Int,
+    val totalCapacity: Int,
+    val occupancyRate: Double,
+    val healthScore: Double,
+    val averageProductionRate: Double,
+    val averageFeedConversion: Double,
+    val averageMortalityRate: Double,
+    val facilitiesNeedingMaintenance: Int,
+    val lastCalculated: Long
+) {
+    /**
+     * Calculate overall farm efficiency
+     */
+    fun getOverallEfficiency(): Double {
+        val occupancyScore = (occupancyRate / 100).coerceIn(0.0, 1.0)
+        val healthScoreNormalized = (healthScore / 100).coerceIn(0.0, 1.0)
+        val productionScore = (averageProductionRate).coerceIn(0.0, 1.0)
+        val feedEfficiencyScore = if (averageFeedConversion > 0) {
+            (2.0 / averageFeedConversion).coerceIn(0.0, 1.0)
+        } else 0.5
+        val mortalityScore = ((100 - averageMortalityRate) / 100).coerceIn(0.0, 1.0)
+
+        return (occupancyScore * 0.2 + 
+                healthScoreNormalized * 0.25 + 
+                productionScore * 0.25 + 
+                feedEfficiencyScore * 0.15 + 
+                mortalityScore * 0.15)
+    }
+
+    /**
+     * Get efficiency rating
+     */
+    fun getEfficiencyRating(): PerformanceRating {
+        val efficiency = getOverallEfficiency()
+        return when {
+            efficiency >= 0.9 -> PerformanceRating.OUTSTANDING
+            efficiency >= 0.8 -> PerformanceRating.EXCELLENT
+            efficiency >= 0.7 -> PerformanceRating.GOOD
+            efficiency >= 0.6 -> PerformanceRating.AVERAGE
+            else -> PerformanceRating.BELOW_AVERAGE
+        }
+    }
+}

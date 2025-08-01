@@ -26,9 +26,23 @@ import com.rio.rostry.data.model.*
         CoinTransaction::class,
         VerificationRequest::class,
         ShowcaseSlot::class,
-        FlockSummary::class
+        FlockSummary::class,
+        // Farm Management System Entities
+        Farm::class,
+        Flock::class,
+        FowlLifecycle::class,
+        FowlLineage::class,
+        VaccinationRecord::class,
+        // Farm Access Management Entities
+        FarmAccess::class,
+        FarmInvitation::class,
+        AccessAuditLog::class,
+        PermissionRequest::class,
+        InvitationTemplate::class,
+        BulkInvitation::class,
+        InvitationAnalytics::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -48,6 +62,16 @@ abstract class RostryDatabase : RoomDatabase() {
     abstract fun verificationDao(): VerificationDao
     abstract fun showcaseDao(): ShowcaseDao
     abstract fun flockSummaryDao(): FlockSummaryDao
+    
+    // Farm Management System DAOs
+    abstract fun farmDao(): FarmDao
+    abstract fun flockDao(): FlockDao
+    abstract fun lifecycleDao(): LifecycleDao
+    abstract fun lineageDao(): LineageDao
+    
+    // Farm Access Management DAOs
+    abstract fun farmAccessDao(): FarmAccessDao
+    abstract fun invitationDao(): InvitationDao
     
     companion object {
         @Volatile
@@ -362,6 +386,311 @@ abstract class RostryDatabase : RoomDatabase() {
             }
         }
         
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                try {
+                    // Create farms table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS farms (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            ownerId TEXT NOT NULL,
+                            farmName TEXT NOT NULL,
+                            location TEXT NOT NULL,
+                            description TEXT NOT NULL DEFAULT '',
+                            farmType TEXT NOT NULL DEFAULT 'SMALL_SCALE',
+                            totalArea REAL NOT NULL DEFAULT 0.0,
+                            establishedDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            verificationStatus TEXT NOT NULL DEFAULT 'PENDING',
+                            certificationLevel TEXT NOT NULL DEFAULT 'BASIC',
+                            certificationDate INTEGER NOT NULL DEFAULT 0,
+                            certificationUrls TEXT NOT NULL DEFAULT '[]',
+                            contactInfo TEXT,
+                            facilities TEXT NOT NULL DEFAULT '[]',
+                            operatingLicense TEXT NOT NULL DEFAULT '',
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create flocks table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS flocks (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            flockName TEXT NOT NULL,
+                            flockType TEXT NOT NULL,
+                            breed TEXT NOT NULL,
+                            totalCount INTEGER NOT NULL DEFAULT 0,
+                            activeCount INTEGER NOT NULL DEFAULT 0,
+                            maleCount INTEGER NOT NULL DEFAULT 0,
+                            femaleCount INTEGER NOT NULL DEFAULT 0,
+                            averageAge INTEGER NOT NULL DEFAULT 0,
+                            establishedDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            facilityId TEXT,
+                            healthStatus TEXT NOT NULL DEFAULT 'HEALTHY',
+                            feedingSchedule TEXT,
+                            vaccinationSchedule TEXT NOT NULL DEFAULT '[]',
+                            productionMetrics TEXT,
+                            environmentalConditions TEXT,
+                            notes TEXT NOT NULL DEFAULT '',
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create fowl_lifecycles table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS fowl_lifecycles (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            fowlId TEXT NOT NULL,
+                            farmId TEXT,
+                            currentStage TEXT NOT NULL DEFAULT 'EGG',
+                            stageStartDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            expectedTransitionDate INTEGER,
+                            actualTransitionDate INTEGER,
+                            stageProgress REAL NOT NULL DEFAULT 0.0,
+                            milestones TEXT NOT NULL DEFAULT '[]',
+                            healthMetrics TEXT,
+                            growthMetrics TEXT,
+                            environmentalFactors TEXT,
+                            careInstructions TEXT NOT NULL DEFAULT '[]',
+                            notes TEXT NOT NULL DEFAULT '',
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create fowl_lineages table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS fowl_lineages (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            fowlId TEXT NOT NULL,
+                            farmId TEXT,
+                            motherId TEXT,
+                            fatherId TEXT,
+                            maternalGrandmotherId TEXT,
+                            maternalGrandfatherId TEXT,
+                            paternalGrandmotherId TEXT,
+                            paternalGrandfatherId TEXT,
+                            bloodlineId TEXT,
+                            bloodlineName TEXT NOT NULL DEFAULT '',
+                            generationNumber INTEGER NOT NULL DEFAULT 1,
+                            inbreedingCoefficient REAL NOT NULL DEFAULT 0.0,
+                            geneticDiversity REAL NOT NULL DEFAULT 0.0,
+                            breedingValue REAL NOT NULL DEFAULT 0.0,
+                            traits TEXT NOT NULL DEFAULT '[]',
+                            healthHistory TEXT NOT NULL DEFAULT '[]',
+                            performanceMetrics TEXT,
+                            breedingRecommendations TEXT NOT NULL DEFAULT '[]',
+                            notes TEXT NOT NULL DEFAULT '',
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create vaccination_records table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS vaccination_records (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            flockId TEXT,
+                            fowlId TEXT,
+                            vaccineName TEXT NOT NULL,
+                            vaccineType TEXT NOT NULL,
+                            administrationDate INTEGER NOT NULL,
+                            nextDueDate INTEGER NOT NULL DEFAULT 0,
+                            dosage TEXT NOT NULL DEFAULT '',
+                            administrationMethod TEXT NOT NULL DEFAULT 'INJECTION',
+                            administeredBy TEXT NOT NULL DEFAULT '',
+                            batchNumber TEXT NOT NULL DEFAULT '',
+                            manufacturer TEXT NOT NULL DEFAULT '',
+                            expiryDate INTEGER NOT NULL DEFAULT 0,
+                            storageTemperature TEXT NOT NULL DEFAULT '',
+                            proofImageUrl TEXT NOT NULL DEFAULT '',
+                            notes TEXT NOT NULL DEFAULT '',
+                            sideEffects TEXT NOT NULL DEFAULT '',
+                            efficacy REAL NOT NULL DEFAULT 0.0,
+                            cost REAL NOT NULL DEFAULT 0.0,
+                            veterinarianApproval INTEGER NOT NULL DEFAULT 0,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create farm_access table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS farm_access (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            userId TEXT NOT NULL,
+                            role TEXT NOT NULL,
+                            permissions TEXT NOT NULL DEFAULT '[]',
+                            invitedBy TEXT NOT NULL,
+                            invitedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            acceptedAt INTEGER,
+                            status TEXT NOT NULL DEFAULT 'PENDING',
+                            expiresAt INTEGER,
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            lastAccessedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            accessNotes TEXT NOT NULL DEFAULT '',
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create farm_invitations table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS farm_invitations (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            farmName TEXT NOT NULL,
+                            inviterUserId TEXT NOT NULL,
+                            inviterName TEXT NOT NULL,
+                            inviterEmail TEXT NOT NULL,
+                            inviteeEmail TEXT NOT NULL,
+                            inviteeUserId TEXT,
+                            proposedRole TEXT NOT NULL,
+                            customPermissions TEXT NOT NULL DEFAULT '[]',
+                            invitationMessage TEXT NOT NULL DEFAULT '',
+                            invitationCode TEXT NOT NULL,
+                            invitationLink TEXT NOT NULL,
+                            status TEXT NOT NULL DEFAULT 'SENT',
+                            priority TEXT NOT NULL DEFAULT 'NORMAL',
+                            sentAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            expiresAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis() + 604800000},
+                            respondedAt INTEGER,
+                            remindersSent INTEGER NOT NULL DEFAULT 0,
+                            lastReminderAt INTEGER,
+                            maxReminders INTEGER NOT NULL DEFAULT 3,
+                            allowCustomRole INTEGER NOT NULL DEFAULT 0,
+                            requiresApproval INTEGER NOT NULL DEFAULT 0,
+                            approvedBy TEXT,
+                            approvedAt INTEGER,
+                            metadata TEXT,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create access_audit_log table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS access_audit_log (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            targetUserId TEXT NOT NULL,
+                            actionPerformedBy TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            previousRole TEXT,
+                            newRole TEXT,
+                            previousPermissions TEXT NOT NULL DEFAULT '[]',
+                            newPermissions TEXT NOT NULL DEFAULT '[]',
+                            reason TEXT NOT NULL DEFAULT '',
+                            ipAddress TEXT NOT NULL DEFAULT '',
+                            userAgent TEXT NOT NULL DEFAULT '',
+                            timestamp INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create permission_requests table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS permission_requests (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            requesterId TEXT NOT NULL,
+                            requestedPermissions TEXT NOT NULL DEFAULT '[]',
+                            reason TEXT NOT NULL,
+                            urgencyLevel TEXT NOT NULL DEFAULT 'NORMAL',
+                            requestedDuration INTEGER,
+                            status TEXT NOT NULL DEFAULT 'PENDING',
+                            reviewedBy TEXT,
+                            reviewedAt INTEGER,
+                            reviewNotes TEXT NOT NULL DEFAULT '',
+                            expiresAt INTEGER,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create invitation_templates table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS invitation_templates (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            name TEXT NOT NULL,
+                            description TEXT NOT NULL,
+                            farmId TEXT NOT NULL,
+                            defaultRole TEXT NOT NULL,
+                            defaultPermissions TEXT NOT NULL DEFAULT '[]',
+                            messageTemplate TEXT NOT NULL,
+                            subjectTemplate TEXT NOT NULL DEFAULT 'Invitation to join {farmName}',
+                            expirationDays INTEGER NOT NULL DEFAULT 7,
+                            maxReminders INTEGER NOT NULL DEFAULT 3,
+                            requiresApproval INTEGER NOT NULL DEFAULT 0,
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            usageCount INTEGER NOT NULL DEFAULT 0,
+                            createdBy TEXT NOT NULL,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create bulk_invitations table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS bulk_invitations (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            name TEXT NOT NULL,
+                            description TEXT NOT NULL DEFAULT '',
+                            inviterUserId TEXT NOT NULL,
+                            templateId TEXT,
+                            defaultRole TEXT NOT NULL,
+                            inviteeEmails TEXT NOT NULL DEFAULT '[]',
+                            customMessage TEXT NOT NULL DEFAULT '',
+                            status TEXT NOT NULL DEFAULT 'PENDING',
+                            totalInvitations INTEGER NOT NULL DEFAULT 0,
+                            sentCount INTEGER NOT NULL DEFAULT 0,
+                            acceptedCount INTEGER NOT NULL DEFAULT 0,
+                            rejectedCount INTEGER NOT NULL DEFAULT 0,
+                            expiredCount INTEGER NOT NULL DEFAULT 0,
+                            startedAt INTEGER,
+                            completedAt INTEGER,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """)
+
+                    // Create invitation_analytics table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS invitation_analytics (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL,
+                            invitationId TEXT NOT NULL,
+                            event TEXT NOT NULL,
+                            timestamp INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            userAgent TEXT NOT NULL DEFAULT '',
+                            ipAddress TEXT NOT NULL DEFAULT '',
+                            deviceType TEXT NOT NULL DEFAULT '',
+                            location TEXT NOT NULL DEFAULT '',
+                            additionalData TEXT NOT NULL DEFAULT '{}'
+                        )
+                    """)
+
+                    // Create indexes for performance
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_farms_owner ON farms(ownerId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_flocks_farm ON flocks(farmId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lifecycles_fowl ON fowl_lifecycles(fowlId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lineages_fowl ON fowl_lineages(fowlId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_access_farm_user ON farm_access(farmId, userId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_invitations_farm ON farm_invitations(farmId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_invitations_email ON farm_invitations(inviteeEmail)")
+
+                } catch (e: Exception) {
+                    // Log error but allow fallback to destructive migration
+                    println("Error in MIGRATION_6_7: ${e.message}")
+                    throw e
+                }
+            }
+        }
+        
         fun getDatabase(context: Context): RostryDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -370,7 +699,7 @@ abstract class RostryDatabase : RoomDatabase() {
                     "rostry_database"
                 )
                 .fallbackToDestructiveMigration() // Allow destructive migration for development
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 INSTANCE = instance
                 instance

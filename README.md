@@ -52,10 +52,14 @@ ROSTRY is a comprehensive Android application for fowl management and marketplac
 - **Dashboard Analytics**: Flock management and performance tracking
 
 ### Advanced Features
+- **Farm Management System**: Complete farm operations with multi-user collaboration
+- **Access Control**: Role-based permissions with 25+ granular permissions
+- **Flock Management**: Health monitoring, production metrics, and analytics
 - **Ownership Transfer**: Secure fowl ownership transfer with verification
 - **Health Records**: Comprehensive health and breeding record management
-- **Breeding Lineage**: Track parent-offspring relationships
+- **Breeding Lineage**: Track parent-offspring relationships with recommendations
 - **Real-time Chat**: Messaging system for buyers and sellers
+- **Farm Analytics**: Interactive dashboards with performance insights
 - **Offline Support**: Local data caching with cloud synchronization
 
 ## 🏗️ Architecture
@@ -101,11 +105,11 @@ app/src/main/java/com/rio/rostry/
 ├── RostryApplication.kt              # Application class with Hilt
 ├── data/                             # Data layer
 │   ├── local/                        # Room database
-│   │   ├── dao/                      # Data Access Objects (14 DAOs)
+│   │   ├── dao/                      # Data Access Objects (20+ DAOs)
 │   │   ├── RostryDatabase.kt         # Database configuration
 │   │   └── Converters.kt             # Type converters
-│   ├── model/                        # Data entities (15 entities)
-│   └── repository/                   # Repository implementations (12 repos)
+│   ├── model/                        # Data entities (25+ entities)
+│   └── repository/                   # Repository implementations (15+ repos)
 ├── di/                               # Dependency injection modules
 ├── domain/                           # Business logic layer
 ├── ui/                               # Presentation layer
@@ -127,13 +131,19 @@ app/src/main/java/com/rio/rostry/
 ## 🗄️ Database Schema
 
 ### Room Database (Local Storage)
-- **15 Entities**: User, Fowl, Post, Chat, Message, CartItem, FowlRecord, TransferLog, MarketplaceListing, Order, Wallet, CoinTransaction, VerificationRequest, ShowcaseSlot, FlockSummary
-- **14 DAOs**: Corresponding data access objects
-- **Version**: 6 (with migration support)
+- **25+ Entities**:
+  - **Core**: User, Fowl, Post, Chat, Message, CartItem, FowlRecord, TransferLog, MarketplaceListing, Order, Wallet, CoinTransaction, VerificationRequest, ShowcaseSlot, FlockSummary
+  - **Farm Management**: Farm, Flock, FowlLifecycle, FowlLineage
+  - **Access Control**: FarmAccess, FarmInvitation, InvitationTemplate, BulkInvitation, AccessAuditLog, PermissionRequest, InvitationAnalytics
+- **20+ DAOs**: Comprehensive data access objects with farm management
+- **Version**: 7 (with farm management migration support)
 
 ### Firebase Collections (Cloud Storage)
 - `users` - User profiles and authentication data
-- `fowls` - Fowl entities and metadata
+- `fowls` - Fowl entities and metadata with lifecycle/lineage
+- `farms` - Farm entities with facilities and certifications
+- `farm_access` - Access control and permissions
+- `farm_invitations` - Invitation system for collaboration
 - `posts` - Social media posts
 - `chats` - Chat conversations
 - `orders` - Purchase orders and transactions

@@ -1,13 +1,13 @@
 # ROSTRY Database Schema Documentation
 
-> **Version**: 6.0  
-> **Last Updated**: 2025-01-08  
-> **Database Type**: Hybrid (Room + Firestore)  
-> **Status**: Current Implementation  
+> **Version**: 7.0
+> **Last Updated**: 2025-01-08
+> **Database Type**: Hybrid (Room + Firestore)
+> **Status**: Current Implementation with Farm Management System
 
 ## 📋 Overview
 
-ROSTRY uses a hybrid database architecture combining Room (local SQLite) for offline capabilities and Firebase Firestore (cloud NoSQL) for real-time synchronization and backup.
+ROSTRY uses a hybrid database architecture combining Room (local SQLite) for offline capabilities and Firebase Firestore (cloud NoSQL) for real-time synchronization and backup. The system now includes comprehensive farm management, access control, and collaboration features.
 
 ## 🏗️ Database Architecture
 
@@ -30,23 +30,45 @@ UI Updates ← Flow/LiveData ← Local DB ← Sync ← Cloud DB
 ```kotlin
 @Database(
     entities = [
+        // Core User & Social Entities
         User::class,
-        Fowl::class,
         Post::class,
         Chat::class,
         Message::class,
-        CartItem::class,
+
+        // Fowl Management Entities
+        Fowl::class,
         FowlRecord::class,
-        TransferLog::class,
+        FowlLifecycle::class,
+        FowlLineage::class,
+
+        // Farm Management Entities
+        Farm::class,
+        Flock::class,
+        FlockSummary::class,
+
+        // Farm Access & Collaboration
+        FarmAccess::class,
+        FarmInvitation::class,
+        InvitationTemplate::class,
+        BulkInvitation::class,
+        AccessAuditLog::class,
+        PermissionRequest::class,
+        InvitationAnalytics::class,
+
+        // Marketplace & Commerce
+        CartItem::class,
         MarketplaceListing::class,
         Order::class,
+        TransferLog::class,
+
+        // Wallet & Verification
         Wallet::class,
         CoinTransaction::class,
         VerificationRequest::class,
-        ShowcaseSlot::class,
-        FlockSummary::class
+        ShowcaseSlot::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -197,14 +219,93 @@ CREATE TABLE wallets (
     lastTransactionDate INTEGER NOT NULL,
     createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL,
-    
+
     FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+#### 8. Farm Table
+```sql
+CREATE TABLE farms (
+    id TEXT PRIMARY KEY NOT NULL,
+    ownerId TEXT NOT NULL,
+    farmName TEXT NOT NULL,
+    location TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    farmType TEXT NOT NULL DEFAULT 'SMALL_SCALE',
+    totalArea REAL NOT NULL DEFAULT 0.0,
+    establishedDate INTEGER NOT NULL,
+    verificationStatus TEXT NOT NULL DEFAULT 'PENDING',
+    certificationLevel TEXT NOT NULL DEFAULT 'BASIC',
+    certificationDate INTEGER NOT NULL DEFAULT 0,
+    certificationUrls TEXT NOT NULL DEFAULT '[]',
+    contactInfo TEXT,
+    facilities TEXT NOT NULL DEFAULT '[]',
+    isActive INTEGER NOT NULL DEFAULT 1,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+
+    FOREIGN KEY(ownerId) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+#### 9. Flock Table
+```sql
+CREATE TABLE flocks (
+    id TEXT PRIMARY KEY NOT NULL,
+    farmId TEXT NOT NULL,
+    flockName TEXT NOT NULL,
+    flockType TEXT NOT NULL,
+    breed TEXT NOT NULL,
+    totalCount INTEGER NOT NULL DEFAULT 0,
+    activeCount INTEGER NOT NULL DEFAULT 0,
+    maleCount INTEGER NOT NULL DEFAULT 0,
+    femaleCount INTEGER NOT NULL DEFAULT 0,
+    averageAge INTEGER NOT NULL DEFAULT 0,
+    establishedDate INTEGER NOT NULL,
+    facilityId TEXT,
+    healthStatus TEXT NOT NULL DEFAULT 'HEALTHY',
+    feedingSchedule TEXT,
+    vaccinationSchedule TEXT NOT NULL DEFAULT '[]',
+    productionMetrics TEXT,
+    environmentalConditions TEXT,
+    notes TEXT NOT NULL DEFAULT '',
+    isActive INTEGER NOT NULL DEFAULT 1,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+
+    FOREIGN KEY(farmId) REFERENCES farms(id) ON DELETE CASCADE
+);
+```
+
+#### 10. Farm Access Table
+```sql
+CREATE TABLE farm_access (
+    id TEXT PRIMARY KEY NOT NULL,
+    farmId TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    role TEXT NOT NULL,
+    permissions TEXT NOT NULL DEFAULT '[]',
+    invitedBy TEXT NOT NULL,
+    invitedAt INTEGER NOT NULL,
+    acceptedAt INTEGER,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    expiresAt INTEGER,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    lastAccessedAt INTEGER NOT NULL,
+    accessNotes TEXT NOT NULL DEFAULT '',
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+
+    FOREIGN KEY(farmId) REFERENCES farms(id) ON DELETE CASCADE,
+    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(invitedBy) REFERENCES users(id)
 );
 ```
 
 ### Database Indexes
 ```sql
--- Performance optimization indexes
+-- Core entity indexes
 CREATE INDEX idx_fowls_owner ON fowls(ownerId);
 CREATE INDEX idx_fowls_for_sale ON fowls(isForSale);
 CREATE INDEX idx_fowls_type ON fowls(type);
@@ -212,26 +313,283 @@ CREATE INDEX idx_messages_chat ON messages(chatId);
 CREATE INDEX idx_orders_buyer ON orders(buyerId);
 CREATE INDEX idx_orders_seller ON orders(sellerId);
 CREATE INDEX idx_posts_author ON posts(authorId);
+
+-- Farm management indexes
+CREATE INDEX idx_farms_owner ON farms(ownerId);
+CREATE INDEX idx_farms_active ON farms(isActive);
+CREATE INDEX idx_flocks_farm ON flocks(farmId);
+CREATE INDEX idx_flocks_type ON flocks(flockType);
+CREATE INDEX idx_flocks_health ON flocks(healthStatus);
+
+-- Farm access indexes
+CREATE INDEX idx_farm_access_user_farm ON farm_access(userId, farmId);
+CREATE INDEX idx_farm_access_farm ON farm_access(farmId);
+CREATE INDEX idx_farm_access_status ON farm_access(status);
+CREATE INDEX idx_farm_invitations_email ON farm_invitations(inviteeEmail);
+CREATE INDEX idx_farm_invitations_farm ON farm_invitations(farmId);
+
+-- Lifecycle and lineage indexes
+CREATE INDEX idx_fowl_lifecycle_fowl ON fowl_lifecycle(fowlId);
+CREATE INDEX idx_fowl_lifecycle_farm ON fowl_lifecycle(farmId);
+CREATE INDEX idx_fowl_lineage_fowl ON fowl_lineage(fowlId);
+CREATE INDEX idx_fowl_lineage_parents ON fowl_lineage(motherId, fatherId);
+
+-- Audit and analytics indexes
+CREATE INDEX idx_access_audit_farm ON access_audit_log(farmId);
+CREATE INDEX idx_access_audit_timestamp ON access_audit_log(timestamp);
+CREATE INDEX idx_permission_requests_farm ON permission_requests(farmId);
 ```
 
 ### Migration History
 ```kotlin
-// Migration from version 5 to 6
-val MIGRATION_5_6 = object : Migration(5, 6) {
+// Migration from version 6 to 7 - Farm Management System
+val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(database: SupportSQLiteDatabase) {
-        // Add FlockSummary table
+        // Farm Management Tables
         database.execSQL("""
-            CREATE TABLE IF NOT EXISTS flockSummary (
+            CREATE TABLE IF NOT EXISTS farms (
                 id TEXT PRIMARY KEY NOT NULL,
-                userId TEXT NOT NULL,
-                totalFowls INTEGER NOT NULL,
-                totalValue REAL NOT NULL,
-                healthyCount INTEGER NOT NULL,
-                sickCount INTEGER NOT NULL,
-                forSaleCount INTEGER NOT NULL,
-                lastUpdated INTEGER NOT NULL
+                ownerId TEXT NOT NULL,
+                farmName TEXT NOT NULL,
+                location TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                farmType TEXT NOT NULL DEFAULT 'SMALL_SCALE',
+                totalArea REAL NOT NULL DEFAULT 0.0,
+                establishedDate INTEGER NOT NULL,
+                verificationStatus TEXT NOT NULL DEFAULT 'PENDING',
+                certificationLevel TEXT NOT NULL DEFAULT 'BASIC',
+                certificationDate INTEGER NOT NULL DEFAULT 0,
+                certificationUrls TEXT NOT NULL DEFAULT '[]',
+                contactInfo TEXT,
+                facilities TEXT NOT NULL DEFAULT '[]',
+                isActive INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
             )
         """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS flocks (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                flockName TEXT NOT NULL,
+                flockType TEXT NOT NULL,
+                breed TEXT NOT NULL,
+                totalCount INTEGER NOT NULL DEFAULT 0,
+                activeCount INTEGER NOT NULL DEFAULT 0,
+                maleCount INTEGER NOT NULL DEFAULT 0,
+                femaleCount INTEGER NOT NULL DEFAULT 0,
+                averageAge INTEGER NOT NULL DEFAULT 0,
+                establishedDate INTEGER NOT NULL,
+                facilityId TEXT,
+                healthStatus TEXT NOT NULL DEFAULT 'HEALTHY',
+                feedingSchedule TEXT,
+                vaccinationSchedule TEXT NOT NULL DEFAULT '[]',
+                productionMetrics TEXT,
+                environmentalConditions TEXT,
+                notes TEXT NOT NULL DEFAULT '',
+                isActive INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        // Farm Access Management Tables
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS farm_access (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                userId TEXT NOT NULL,
+                role TEXT NOT NULL,
+                permissions TEXT NOT NULL DEFAULT '[]',
+                invitedBy TEXT NOT NULL,
+                invitedAt INTEGER NOT NULL,
+                acceptedAt INTEGER,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                expiresAt INTEGER,
+                isActive INTEGER NOT NULL DEFAULT 1,
+                lastAccessedAt INTEGER NOT NULL,
+                accessNotes TEXT NOT NULL DEFAULT '',
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS farm_invitations (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                farmName TEXT NOT NULL,
+                inviterUserId TEXT NOT NULL,
+                inviterName TEXT NOT NULL,
+                inviterEmail TEXT NOT NULL,
+                inviteeEmail TEXT NOT NULL,
+                inviteeUserId TEXT,
+                proposedRole TEXT NOT NULL,
+                customPermissions TEXT NOT NULL DEFAULT '[]',
+                invitationMessage TEXT NOT NULL DEFAULT '',
+                invitationCode TEXT NOT NULL,
+                invitationLink TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'SENT',
+                priority TEXT NOT NULL DEFAULT 'NORMAL',
+                sentAt INTEGER NOT NULL,
+                expiresAt INTEGER NOT NULL,
+                respondedAt INTEGER,
+                remindersSent INTEGER NOT NULL DEFAULT 0,
+                lastReminderAt INTEGER,
+                maxReminders INTEGER NOT NULL DEFAULT 3,
+                allowCustomRole INTEGER NOT NULL DEFAULT 0,
+                requiresApproval INTEGER NOT NULL DEFAULT 0,
+                approvedBy TEXT,
+                approvedAt INTEGER,
+                metadata TEXT,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        // Additional Farm Management Tables
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS invitation_templates (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                farmId TEXT NOT NULL,
+                defaultRole TEXT NOT NULL,
+                defaultPermissions TEXT NOT NULL DEFAULT '[]',
+                messageTemplate TEXT NOT NULL,
+                subjectTemplate TEXT NOT NULL DEFAULT 'Invitation to join {farmName}',
+                expirationDays INTEGER NOT NULL DEFAULT 7,
+                maxReminders INTEGER NOT NULL DEFAULT 3,
+                requiresApproval INTEGER NOT NULL DEFAULT 0,
+                isActive INTEGER NOT NULL DEFAULT 1,
+                usageCount INTEGER NOT NULL DEFAULT 0,
+                createdBy TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS bulk_invitations (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                inviterUserId TEXT NOT NULL,
+                templateId TEXT,
+                defaultRole TEXT NOT NULL,
+                inviteeEmails TEXT NOT NULL,
+                customMessage TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                totalInvitations INTEGER NOT NULL,
+                sentCount INTEGER NOT NULL DEFAULT 0,
+                acceptedCount INTEGER NOT NULL DEFAULT 0,
+                rejectedCount INTEGER NOT NULL DEFAULT 0,
+                expiredCount INTEGER NOT NULL DEFAULT 0,
+                startedAt INTEGER,
+                completedAt INTEGER,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS access_audit_log (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                targetUserId TEXT NOT NULL,
+                actionPerformedBy TEXT NOT NULL,
+                action TEXT NOT NULL,
+                previousRole TEXT,
+                newRole TEXT,
+                previousPermissions TEXT NOT NULL DEFAULT '[]',
+                newPermissions TEXT NOT NULL DEFAULT '[]',
+                reason TEXT NOT NULL DEFAULT '',
+                ipAddress TEXT NOT NULL DEFAULT '',
+                userAgent TEXT NOT NULL DEFAULT '',
+                timestamp INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS permission_requests (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                requesterId TEXT NOT NULL,
+                requestedPermissions TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                urgencyLevel TEXT NOT NULL DEFAULT 'NORMAL',
+                requestedDuration INTEGER,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                reviewedBy TEXT,
+                reviewedAt INTEGER,
+                reviewNotes TEXT NOT NULL DEFAULT '',
+                expiresAt INTEGER,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS invitation_analytics (
+                id TEXT PRIMARY KEY NOT NULL,
+                farmId TEXT NOT NULL,
+                totalInvitations INTEGER NOT NULL DEFAULT 0,
+                sentInvitations INTEGER NOT NULL DEFAULT 0,
+                acceptedInvitations INTEGER NOT NULL DEFAULT 0,
+                rejectedInvitations INTEGER NOT NULL DEFAULT 0,
+                expiredInvitations INTEGER NOT NULL DEFAULT 0,
+                averageResponseTime INTEGER NOT NULL DEFAULT 0,
+                acceptanceRate REAL NOT NULL DEFAULT 0.0,
+                lastCalculated INTEGER NOT NULL
+            )
+        """)
+
+        // Enhanced Lifecycle and Lineage Tables
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS fowl_lifecycle (
+                id TEXT PRIMARY KEY NOT NULL,
+                fowlId TEXT NOT NULL,
+                farmId TEXT,
+                currentStage TEXT NOT NULL,
+                stageStartDate INTEGER NOT NULL,
+                expectedNextStage TEXT,
+                expectedStageDate INTEGER,
+                growthMetrics TEXT,
+                healthMetrics TEXT,
+                productionMetrics TEXT,
+                notes TEXT NOT NULL DEFAULT '',
+                isActive INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS fowl_lineage (
+                id TEXT PRIMARY KEY NOT NULL,
+                fowlId TEXT NOT NULL,
+                farmId TEXT,
+                motherId TEXT,
+                fatherId TEXT,
+                generation INTEGER NOT NULL DEFAULT 1,
+                bloodlineId TEXT,
+                breedingValue REAL NOT NULL DEFAULT 0.0,
+                geneticTraits TEXT NOT NULL DEFAULT '[]',
+                breedingHistory TEXT NOT NULL DEFAULT '[]',
+                lineageNotes TEXT NOT NULL DEFAULT '',
+                isVerified INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL
+            )
+        """)
+
+        // Create indexes for performance
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_farms_owner ON farms(ownerId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_flocks_farm ON flocks(farmId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_access_user_farm ON farm_access(userId, farmId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_invitations_email ON farm_invitations(inviteeEmail)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lifecycle_fowl ON fowl_lifecycle(fowlId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lineage_fowl ON fowl_lineage(fowlId)")
     }
 }
 ```
@@ -253,7 +611,19 @@ rostry-firestore/
 │       ├── fowl data
 │       └── subcollections/
 │           ├── records/            # Health records
-│           └── transfers/          # Transfer history
+│           ├── transfers/          # Transfer history
+│           ├── lifecycle/          # Lifecycle tracking
+│           └── lineage/            # Breeding lineage
+├── farms/                          # Farm entities
+│   └── {farmId}/
+│       ├── farm data
+│       └── subcollections/
+│           ├── flocks/             # Farm flocks
+│           ├── access/             # Access control
+│           ├── invitations/        # Farm invitations
+│           └── analytics/          # Farm analytics
+├── farm_access/                    # Farm access records
+├── farm_invitations/               # Farm invitation system
 ├── chats/                          # Chat conversations
 │   └── {chatId}/
 │       ├── chat metadata
