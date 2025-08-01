@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.rio.rostry.ui.components.ShimmerFowlCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,23 +55,40 @@ fun MyFowlsScreen(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Content
+        // Enhanced Content with better layout
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 160.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                CircularProgressIndicator()
+                items(6) { // Show 6 shimmer cards while loading
+                    ShimmerFowlCard()
+                }
             }
         } else if (uiState.fowls.isEmpty()) {
             EmptyFowlsState(onAddFowlClick = onNavigateToAddFowl)
         } else {
+            // Statistics summary
+            FowlStatsSummary(
+                totalFowls = uiState.fowls.size,
+                forSale = uiState.fowls.count { it.isForSale },
+                breeders = uiState.fowls.count { it.status.contains("Breeder", ignoreCase = true) }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                columns = GridCells.Adaptive(minSize = 160.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(uiState.fowls) { fowl ->
+                items(
+                    items = uiState.fowls,
+                    key = { fowl -> fowl.id }
+                ) { fowl ->
                     MyFowlCard(
                         fowl = fowl,
                         onFowlClick = { onNavigateToFowlDetail(fowl.id) },
@@ -98,6 +116,63 @@ fun MyFowlsScreen(
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun FowlStatsSummary(
+    totalFowls: Int,
+    forSale: Int,
+    breeders: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        StatCard(
+            title = "Total",
+            value = totalFowls.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            title = "For Sale",
+            value = forSale.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            title = "Breeders",
+            value = breeders.toString(),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    ElevatedCard(
+        modifier = modifier,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
