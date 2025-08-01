@@ -119,18 +119,22 @@ interface FarmDao {
     fun getFarmsNeedingMaintenance(): Flow<List<Farm>>
 
     /**
-     * Get farm statistics
+     * Get total farm count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalFarms,
-            AVG(totalArea) as averageArea,
-            SUM(totalArea) as totalArea,
-            COUNT(CASE WHEN verificationStatus = 'VERIFIED' THEN 1 END) as verifiedFarms
-        FROM farms 
-        WHERE isActive = 1
-    """)
-    suspend fun getFarmStatistics(): Map<String, Double>
+    @Query("SELECT COUNT(*) FROM farms WHERE isActive = 1")
+    suspend fun getTotalFarmCount(): Int
+
+    /**
+     * Get verified farm count
+     */
+    @Query("SELECT COUNT(*) FROM farms WHERE verificationStatus = 'VERIFIED' AND isActive = 1")
+    suspend fun getVerifiedFarmCount(): Int
+
+    /**
+     * Get average farm area
+     */
+    @Query("SELECT AVG(totalArea) FROM farms WHERE isActive = 1")
+    suspend fun getAverageFarmArea(): Double
 
     /**
      * Get farms by establishment date range
@@ -238,27 +242,6 @@ interface FarmDao {
     suspend fun deleteOldInactiveFarms(cutoffDate: Long)
 
     /**
-     * Get farm performance metrics
-     */
-    @Query("""
-        SELECT 
-            f.id,
-            f.farmName,
-            f.totalArea,
-            (SELECT SUM(json_extract(facility.value, '$.capacity'))
-             FROM json_each(f.facilities) facility) as totalCapacity,
-            (SELECT SUM(json_extract(facility.value, '$.currentOccupancy'))
-             FROM json_each(f.facilities) facility) as currentOccupancy,
-            (SELECT COUNT(*)
-             FROM json_each(f.facilities) facility
-             WHERE json_extract(facility.value, '$.condition') IN ('POOR', 'NEEDS_REPAIR')) as facilitiesNeedingMaintenance
-        FROM farms f
-        WHERE f.isActive = 1
-        ORDER BY f.farmName ASC
-    """)
-    suspend fun getFarmPerformanceMetrics(): List<Map<String, Any>>
-
-    /**
      * Get farms by location pattern
      */
     @Query("""
@@ -270,30 +253,16 @@ interface FarmDao {
     fun getFarmsByLocation(locationPattern: String): Flow<List<Farm>>
 
     /**
-     * Count farms by type
+     * Count farms by type - simplified
      */
-    @Query("""
-        SELECT farmType, COUNT(*) as count 
-        FROM farms 
-        WHERE isActive = 1 
-        GROUP BY farmType
-    """)
-    suspend fun getFarmCountByType(): Map<FarmType, Int>
+    @Query("SELECT COUNT(*) FROM farms WHERE farmType = :farmType AND isActive = 1")
+    suspend fun getFarmCountByType(farmType: String): Int
 
     /**
-     * Get average farm metrics
+     * Get total farm area
      */
-    @Query("""
-        SELECT 
-            AVG(totalArea) as avgArea,
-            AVG((SELECT SUM(json_extract(facility.value, '$.capacity'))
-                 FROM json_each(facilities) facility)) as avgCapacity,
-            AVG((SELECT COUNT(*)
-                 FROM json_each(facilities) facility)) as avgFacilities
-        FROM farms 
-        WHERE isActive = 1
-    """)
-    suspend fun getAverageFarmMetrics(): Map<String, Double>
+    @Query("SELECT SUM(totalArea) FROM farms WHERE isActive = 1")
+    suspend fun getTotalFarmArea(): Double
 
     /**
      * Get farms with upcoming certification renewal

@@ -200,7 +200,7 @@ data class Bloodline(
     val performanceMetrics: BloodlineMetrics? = null,
     val geneticDiversity: Double = 1.0,
     val breedingGoals: List<String> = emptyList(),
-    val certificationLevel: CertificationLevel = CertificationLevel.UNVERIFIED,
+    val certificationLevel: String = "UNVERIFIED",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) {
@@ -241,14 +241,6 @@ enum class BloodlineStrength(val displayName: String, val description: String) {
     AVERAGE("Average", "Standard genetic line"),
     WEAK("Weak", "Genetic line needs improvement"),
     UNKNOWN("Unknown", "Insufficient data for assessment")
-}
-
-enum class CertificationLevel(val displayName: String) {
-    UNVERIFIED("Unverified"),
-    BASIC("Basic Certification"),
-    ADVANCED("Advanced Certification"),
-    PREMIUM("Premium Certification"),
-    CHAMPION("Champion Bloodline")
 }
 
 /**
@@ -292,14 +284,6 @@ data class BloodlineMetrics(
             else -> PerformanceRating.BELOW_AVERAGE
         }
     }
-}
-
-enum class PerformanceRating(val displayName: String, val color: String) {
-    OUTSTANDING("Outstanding", "#4CAF50"),
-    EXCELLENT("Excellent", "#8BC34A"),
-    GOOD("Good", "#CDDC39"),
-    AVERAGE("Average", "#FFC107"),
-    BELOW_AVERAGE("Below Average", "#FF5722")
 }
 
 /**

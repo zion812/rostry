@@ -63,6 +63,12 @@ interface LineageDao {
     fun getAllLineages(): Flow<List<FowlLineage>>
 
     /**
+     * Get all lineages as list (for breeding recommendations)
+     */
+    @Query("SELECT * FROM fowl_lineage ORDER BY generation ASC, createdAt DESC")
+    suspend fun getAllLineagesList(): List<FowlLineage>
+
+    /**
      * Get lineages by generation
      */
     @Query("SELECT * FROM fowl_lineage WHERE generation = :generation ORDER BY createdAt DESC")
@@ -79,6 +85,12 @@ interface LineageDao {
      */
     @Query("SELECT * FROM fowl_lineage WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
     fun getOffspringByParent(parentId: String): Flow<List<FowlLineage>>
+
+    /**
+     * Get lineages by parent ID (for family tree)
+     */
+    @Query("SELECT * FROM fowl_lineage WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
+    suspend fun getLineagesByParentId(parentId: String): List<FowlLineage>
 
     /**
      * Get siblings (same parents)
@@ -104,60 +116,30 @@ interface LineageDao {
     fun getUnverifiedLineages(): Flow<List<FowlLineage>>
 
     /**
-     * Get breeding pairs (potential mates with good compatibility)
+     * Get potential breeding pairs count
      */
     @Query("""
-        SELECT l1.*, l2.fowlId as potentialMateId 
-        FROM fowl_lineage l1, fowl_lineage l2
+        SELECT COUNT(*) FROM fowl_lineage l1, fowl_lineage l2
         WHERE l1.fowlId != l2.fowlId
         AND l1.bloodlineId != l2.bloodlineId
         AND l1.inbreedingCoefficient < 0.25
         AND l2.inbreedingCoefficient < 0.25
         AND l1.lineageVerified = 1
         AND l2.lineageVerified = 1
-        ORDER BY (l1.inbreedingCoefficient + l2.inbreedingCoefficient) ASC
     """)
-    suspend fun getOptimalBreedingPairs(): List<Map<String, Any>>
+    suspend fun getOptimalBreedingPairsCount(): Int
 
     /**
-     * Get family tree ancestors (parents and grandparents)
+     * Get direct offspring count
      */
-    @Query("""
-        WITH RECURSIVE ancestors AS (
-            SELECT fowlId, parentMaleId, parentFemaleId, generation, 0 as level
-            FROM fowl_lineage 
-            WHERE fowlId = :fowlId
-            
-            UNION ALL
-            
-            SELECT l.fowlId, l.parentMaleId, l.parentFemaleId, l.generation, a.level + 1
-            FROM fowl_lineage l
-            INNER JOIN ancestors a ON (l.fowlId = a.parentMaleId OR l.fowlId = a.parentFemaleId)
-            WHERE a.level < 3
-        )
-        SELECT * FROM ancestors WHERE level > 0
-    """)
-    suspend fun getAncestors(fowlId: String): List<FowlLineage>
+    @Query("SELECT COUNT(*) FROM fowl_lineage WHERE parentMaleId = :fowlId OR parentFemaleId = :fowlId")
+    suspend fun getDirectOffspringCount(fowlId: String): Int
 
     /**
-     * Get family tree descendants (children and grandchildren)
+     * Get generation count for fowl
      */
-    @Query("""
-        WITH RECURSIVE descendants AS (
-            SELECT fowlId, parentMaleId, parentFemaleId, generation, 0 as level
-            FROM fowl_lineage 
-            WHERE fowlId = :fowlId
-            
-            UNION ALL
-            
-            SELECT l.fowlId, l.parentMaleId, l.parentFemaleId, l.generation, d.level + 1
-            FROM fowl_lineage l
-            INNER JOIN descendants d ON (l.parentMaleId = d.fowlId OR l.parentFemaleId = d.fowlId)
-            WHERE d.level < 3
-        )
-        SELECT * FROM descendants WHERE level > 0
-    """)
-    suspend fun getDescendants(fowlId: String): List<FowlLineage>
+    @Query("SELECT generation FROM fowl_lineage WHERE fowlId = :fowlId LIMIT 1")
+    suspend fun getFowlGeneration(fowlId: String): Int?
 
     /**
      * Calculate inbreeding coefficient for a fowl
@@ -172,18 +154,22 @@ interface LineageDao {
     suspend fun calculateInbreedingRisk(fowlId: String): Int
 
     /**
-     * Get lineage statistics
+     * Get total lineage count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalLineages,
-            COUNT(CASE WHEN lineageVerified = 1 THEN 1 END) as verifiedCount,
-            AVG(generation) as avgGeneration,
-            MAX(generation) as maxGeneration,
-            AVG(inbreedingCoefficient) as avgInbreeding
-        FROM fowl_lineage
-    """)
-    suspend fun getLineageStatistics(): Map<String, Double>
+    @Query("SELECT COUNT(*) FROM fowl_lineage")
+    suspend fun getTotalLineageCount(): Int
+
+    /**
+     * Get verified lineage count
+     */
+    @Query("SELECT COUNT(*) FROM fowl_lineage WHERE lineageVerified = 1")
+    suspend fun getVerifiedLineageCount(): Int
+
+    /**
+     * Get average generation
+     */
+    @Query("SELECT AVG(generation) FROM fowl_lineage")
+    suspend fun getAverageGeneration(): Double
 
     // ==================== BLOODLINE OPERATIONS ====================
 
@@ -265,18 +251,22 @@ interface LineageDao {
     fun searchBloodlines(query: String): Flow<List<Bloodline>>
 
     /**
-     * Get bloodline performance summary
+     * Get total bloodline count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalBloodlines,
-            AVG(activeBreeders) as avgActiveBreeders,
-            AVG(totalGenerations) as avgGenerations,
-            AVG(geneticDiversity) as avgGeneticDiversity,
-            COUNT(CASE WHEN certificationLevel != 'UNVERIFIED' THEN 1 END) as certifiedCount
-        FROM bloodlines
-    """)
-    suspend fun getBloodlinePerformanceSummary(): Map<String, Double>
+    @Query("SELECT COUNT(*) FROM bloodlines")
+    suspend fun getTotalBloodlineCount(): Int
+
+    /**
+     * Get average genetic diversity
+     */
+    @Query("SELECT AVG(geneticDiversity) FROM bloodlines")
+    suspend fun getAverageGeneticDiversity(): Double
+
+    /**
+     * Get certified bloodline count
+     */
+    @Query("SELECT COUNT(*) FROM bloodlines WHERE certificationLevel != 'UNVERIFIED'")
+    suspend fun getCertifiedBloodlineCount(): Int
 
     /**
      * Get bloodlines by founder fowl
@@ -319,28 +309,15 @@ interface LineageDao {
     suspend fun deleteInactiveBloodlines()
 
     /**
-     * Get breeding recommendations based on genetic compatibility
+     * Get breeding candidate count
      */
     @Query("""
-        SELECT 
-            l1.fowlId as fowl1,
-            l2.fowlId as fowl2,
-            (1.0 - (l1.inbreedingCoefficient + l2.inbreedingCoefficient) / 2.0) as compatibilityScore
-        FROM fowl_lineage l1, fowl_lineage l2
-        WHERE l1.fowlId != l2.fowlId
-        AND l1.bloodlineId != l2.bloodlineId
-        AND l1.lineageVerified = 1
-        AND l2.lineageVerified = 1
-        AND l1.fowlId IN (
+        SELECT COUNT(*) FROM fowl_lineage
+        WHERE lineageVerified = 1
+        AND fowlId IN (
             SELECT fowlId FROM fowl_lifecycle 
             WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')
         )
-        AND l2.fowlId IN (
-            SELECT fowlId FROM fowl_lifecycle 
-            WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')
-        )
-        ORDER BY compatibilityScore DESC
-        LIMIT :limit
     """)
-    suspend fun getBreedingRecommendations(limit: Int = 20): List<Map<String, Any>>
+    suspend fun getBreedingCandidateCount(): Int
 }

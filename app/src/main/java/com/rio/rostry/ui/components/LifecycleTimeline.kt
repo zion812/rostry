@@ -398,7 +398,7 @@ private fun MilestoneChip(
         leadingIcon = {
             Icon(
                 imageVector = when (milestone.verificationStatus) {
-                    com.rio.rostry.data.model.VerificationStatus.VERIFIED -> Icons.Default.Verified
+                    com.rio.rostry.data.model.VerificationStatus.VERIFIED -> Icons.Default.CheckCircle
                     com.rio.rostry.data.model.VerificationStatus.PENDING -> Icons.Default.Schedule
                     else -> Icons.Default.Help
                 },
@@ -562,8 +562,8 @@ private fun getStageIcon(stage: LifecycleStage): ImageVector {
     return when (stage) {
         LifecycleStage.EGG -> Icons.Default.Circle
         LifecycleStage.HATCHING -> Icons.Default.Egg
-        LifecycleStage.CHICK -> Icons.Default.Pets
-        LifecycleStage.JUVENILE -> Icons.Default.TrendingUp
+        LifecycleStage.CHICK -> Icons.Default.Home
+        LifecycleStage.JUVENILE -> Icons.Default.ArrowUpward
         LifecycleStage.ADULT -> Icons.Default.Star
         LifecycleStage.BREEDER_ACTIVE -> Icons.Default.Favorite
     }

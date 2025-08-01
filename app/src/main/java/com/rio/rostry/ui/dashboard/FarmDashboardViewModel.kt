@@ -31,58 +31,85 @@ class FarmDashboardViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                combine(
-                    farmRepository.getCurrentFarm(),
-                    farmRepository.getAllFlocks(),
-                    lifecycleRepository.getAllLifecycles(),
-                    farmRepository.getHealthAlerts(),
-                    farmRepository.getUpcomingTasks(),
-                    farmRepository.getRecentActivities()
-                ) { farm, flocks, lifecycles, alerts, tasks, activities ->
-                    
-                    val totalFowls = flocks.sumOf { it.activeCount }
-                    val breedingStock = lifecycles.count { 
-                        it.currentStage in listOf(LifecycleStage.ADULT, LifecycleStage.BREEDER_ACTIVE) 
-                    }
-                    val dailyEggProduction = flocks
-                        .filter { it.flockType == FlockType.LAYING_HENS }
-                        .sumOf { flock ->
-                            flock.productionMetrics?.let { metrics ->
-                                (metrics.eggProductionRate * flock.activeCount).toInt()
-                            } ?: 0
-                        }
-
-                    FarmDashboardData(
-                        farm = farm,
-                        flocks = flocks,
-                        totalFowls = totalFowls,
-                        breedingStock = breedingStock,
-                        dailyEggProduction = dailyEggProduction,
-                        healthAlerts = alerts,
-                        upcomingTasks = tasks,
-                        recentActivities = activities
-                    )
-                }.collect { data ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        farm = data.farm,
-                        flocks = data.flocks,
-                        totalFowls = data.totalFowls,
-                        activeFlocks = data.flocks.size,
-                        breedingStock = data.breedingStock,
-                        dailyEggProduction = data.dailyEggProduction,
-                        healthAlerts = data.healthAlerts,
-                        upcomingTasks = data.upcomingTasks,
-                        recentActivities = data.recentActivities,
-                        error = null
-                    )
-                }
+                // Load data step by step to avoid complex combine type inference issues
+                loadFarmData()
+                loadFlockData()
+                loadLifecycleData()
+                loadAlertsAndTasks()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Failed to load dashboard data"
                 )
             }
+        }
+    }
+
+    /**
+     * Load farm data
+     */
+    private suspend fun loadFarmData() {
+        farmRepository.getCurrentFarm().collect { farm ->
+            _uiState.value = _uiState.value.copy(farm = farm)
+        }
+    }
+
+    /**
+     * Load flock data and calculate metrics
+     */
+    private suspend fun loadFlockData() {
+        farmRepository.getAllFlocks().collect { flocks ->
+            val totalFowls = flocks.sumOf { it.activeCount }
+            val dailyEggProduction = flocks
+                .filter { it.flockType == FlockType.LAYING_HENS }
+                .sumOf { flock ->
+                    flock.productionMetrics?.let { metrics ->
+                        (metrics.eggProductionRate * flock.activeCount).toInt()
+                    } ?: 0
+                }
+
+            _uiState.value = _uiState.value.copy(
+                flocks = flocks,
+                totalFowls = totalFowls,
+                activeFlocks = flocks.size,
+                dailyEggProduction = dailyEggProduction
+            )
+        }
+    }
+
+    /**
+     * Load lifecycle data and calculate breeding stock
+     */
+    private suspend fun loadLifecycleData() {
+        lifecycleRepository.getAllLifecycles().collect { lifecycles ->
+            val breedingStock = lifecycles.count { 
+                it.currentStage in listOf(LifecycleStage.ADULT, LifecycleStage.BREEDER_ACTIVE) 
+            }
+
+            _uiState.value = _uiState.value.copy(
+                breedingStock = breedingStock,
+                isLoading = false
+            )
+        }
+    }
+
+    /**
+     * Load alerts and tasks
+     */
+    private suspend fun loadAlertsAndTasks() {
+        // Load health alerts
+        farmRepository.getHealthAlerts().collect { alerts ->
+            _uiState.value = _uiState.value.copy(healthAlerts = alerts)
+        }
+
+        // Load upcoming tasks
+        farmRepository.getUpcomingTasks().collect { tasks ->
+            _uiState.value = _uiState.value.copy(upcomingTasks = tasks)
+        }
+
+        // Load recent activities
+        farmRepository.getRecentActivities().collect { activities ->
+            _uiState.value = _uiState.value.copy(recentActivities = activities)
         }
     }
 

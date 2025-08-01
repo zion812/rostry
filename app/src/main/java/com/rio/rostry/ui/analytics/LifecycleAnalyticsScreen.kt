@@ -155,7 +155,7 @@ private fun AnalyticsOverviewCard(
                 AnalyticsMetric(
                     label = "Total Fowls",
                     value = totalFowls.toString(),
-                    icon = Icons.Default.Pets,
+                    icon = Icons.Default.Home,
                     color = MaterialTheme.colorScheme.primary
                 )
 
@@ -169,14 +169,14 @@ private fun AnalyticsOverviewCard(
                 AnalyticsMetric(
                     label = "Growth Rate",
                     value = "${String.format("%.1f", averageGrowthRate)}%",
-                    icon = Icons.Default.TrendingUp,
+                    icon = Icons.Default.ArrowUpward,
                     color = MaterialTheme.colorScheme.tertiary
                 )
 
                 AnalyticsMetric(
                     label = "Survival Rate",
                     value = "${String.format("%.1f", survivalRate)}%",
-                    icon = Icons.Default.Shield,
+                    icon = Icons.Default.CheckCircle,
                     color = Color(0xFF4CAF50)
                 )
             }
@@ -501,7 +501,7 @@ private fun PerformanceInsights(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Psychology,
+                        imageVector = Icons.Default.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(24.dp)
@@ -543,7 +543,7 @@ private fun ErrorScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Error,
+            imageVector = Icons.Default.Warning,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(64.dp)

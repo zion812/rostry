@@ -102,25 +102,20 @@ interface LifecycleDao {
     fun getFowlsReadyForTransition(currentTime: Long = System.currentTimeMillis()): Flow<List<FowlLifecycle>>
 
     /**
-     * Get lifecycle statistics by stage
+     * Get lifecycle count by stage
      */
-    @Query("""
-        SELECT currentStage, COUNT(*) as count 
-        FROM fowl_lifecycle 
-        GROUP BY currentStage
-    """)
-    suspend fun getStageDistribution(): Map<LifecycleStage, Int>
+    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE currentStage = :stage")
+    suspend fun getLifecycleCountByStage(stage: String): Int
 
     /**
-     * Get average growth metrics for a specific stage
+     * Get average weight for a specific stage
      */
     @Query("""
-        SELECT AVG(json_extract(growthMetrics, '$[*].weight')) as avgWeight,
-               AVG(json_extract(growthMetrics, '$[*].height')) as avgHeight
+        SELECT AVG(json_extract(growthMetrics, '$[*].weight'))
         FROM fowl_lifecycle 
         WHERE currentStage = :stage
     """)
-    suspend fun getAverageGrowthForStage(stage: LifecycleStage): Map<String, Double>
+    suspend fun getAverageWeightForStage(stage: String): Double
 
     /**
      * Get fowls with overdue milestones
@@ -172,17 +167,16 @@ interface LifecycleDao {
     ): Flow<List<FowlLifecycle>>
 
     /**
-     * Get breeding performance metrics
+     * Get total breeder count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalBreeders,
-            AVG(CASE WHEN currentStage = 'BREEDER_ACTIVE' THEN 1 ELSE 0 END) as activeBreederRate,
-            COUNT(CASE WHEN isBreederCandidate = 1 THEN 1 END) as breedingCandidates
-        FROM fowl_lifecycle 
-        WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')
-    """)
-    suspend fun getBreedingMetrics(): Map<String, Double>
+    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')")
+    suspend fun getTotalBreederCount(): Int
+
+    /**
+     * Get breeding candidate count
+     */
+    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE isBreederCandidate = 1")
+    suspend fun getBreedingCandidateCount(): Int
 
     /**
      * Delete lifecycles older than specified date
@@ -191,18 +185,10 @@ interface LifecycleDao {
     suspend fun deleteOldLifecycles(cutoffDate: Long)
 
     /**
-     * Get lifecycle completion rate by batch
+     * Get total lifecycle count by batch
      */
-    @Query("""
-        SELECT 
-            batchId,
-            COUNT(*) as total,
-            COUNT(CASE WHEN currentStage IN ('ADULT', 'BREEDER_ACTIVE') THEN 1 END) as completed
-        FROM fowl_lifecycle 
-        WHERE batchId IS NOT NULL 
-        GROUP BY batchId
-    """)
-    suspend fun getBatchCompletionRates(): Map<String, Map<String, Int>>
+    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE batchId = :batchId")
+    suspend fun getLifecycleCountByBatch(batchId: String): Int
 
     /**
      * Get fowls by generation (for lineage analysis)

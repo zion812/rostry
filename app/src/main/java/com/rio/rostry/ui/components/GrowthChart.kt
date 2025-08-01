@@ -422,7 +422,7 @@ private fun ChartLabels(
 
             displayMetrics.forEach { metric ->
                 Text(
-                    text = formatDate(metric.date, "MM/dd"),
+                    text = formatDate(metric.date),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
@@ -450,7 +450,7 @@ private fun GrowthMetricsSummary(
         MetricCard(
             label = "Current Weight",
             value = "${latest?.weight ?: 0.0} kg",
-            icon = Icons.Default.Scale,
+            icon = Icons.Default.Assessment,
             trend = if (growthRate > 0) TrendDirection.UP else TrendDirection.STABLE
         )
 
@@ -566,7 +566,7 @@ private fun GrowthInsights(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Lightbulb,
+                        imageVector = Icons.Default.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(20.dp)

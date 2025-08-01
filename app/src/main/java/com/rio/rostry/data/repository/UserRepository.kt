@@ -170,4 +170,39 @@ class UserRepository @Inject constructor(
     suspend fun getRecentUsers(limit: Int): List<User> {
         return userDao.getRecentUsers(limit)
     }
+    
+    suspend fun getUserById(userId: String): User? {
+        return getUser(userId)
+    }
+    
+    suspend fun getUserByEmail(email: String): User? {
+        return try {
+            // Try to get from local database first
+            val localUser = userDao.getUserByEmail(email)
+            if (localUser != null) {
+                return localUser
+            }
+            
+            // If not found locally, fetch from Firestore
+            val documents = firestore.collection("users")
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get()
+                .await()
+            
+            if (!documents.isEmpty) {
+                val user = documents.documents[0].toObject(User::class.java)
+                user?.let {
+                    // Cache in local database
+                    userDao.insertUser(it)
+                }
+                user
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            // If Firestore fails, try local database
+            userDao.getUserByEmail(email)
+        }
+    }
 }

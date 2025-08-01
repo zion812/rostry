@@ -368,7 +368,7 @@ private fun FamilyTreeNode(
                 
                 if (isVerified) {
                     Icon(
-                        imageVector = Icons.Default.Verified,
+                        imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Verified",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -523,13 +523,13 @@ private fun LineageInformation(
                 LineageInfoItem(
                     label = "Generation",
                     value = lineage.generation.toString(),
-                    icon = Icons.Default.Layers
+                    icon = Icons.Default.Timeline
                 )
 
                 LineageInfoItem(
                     label = "Bloodline",
                     value = if (lineage.bloodlineId.isNotEmpty()) "Established" else "New",
-                    icon = Icons.Default.Bloodtype
+                    icon = Icons.Default.Favorite
                 )
 
                 LineageInfoItem(
@@ -604,7 +604,7 @@ private fun BreedingCompatibilityInsights(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Psychology,
+                        imageVector = Icons.Default.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(20.dp)
@@ -649,7 +649,7 @@ private fun EmptyFamilyTree(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Default.FamilyRestroom,
+                imageVector = Icons.Default.AccountTree,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(48.dp)
@@ -679,11 +679,11 @@ private enum class FamilyNodeType {
 
 private fun getNodeIcon(nodeType: FamilyNodeType): ImageVector {
     return when (nodeType) {
-        FamilyNodeType.GRANDPARENT -> Icons.Default.Elderly
-        FamilyNodeType.FATHER -> Icons.Default.Male
-        FamilyNodeType.MOTHER -> Icons.Default.Female
-        FamilyNodeType.CURRENT -> Icons.Default.Pets
-        FamilyNodeType.OFFSPRING -> Icons.Default.ChildCare
+        FamilyNodeType.GRANDPARENT -> Icons.Default.Person
+        FamilyNodeType.FATHER -> Icons.Default.Person
+        FamilyNodeType.MOTHER -> Icons.Default.Person
+        FamilyNodeType.CURRENT -> Icons.Default.Home
+        FamilyNodeType.OFFSPRING -> Icons.Default.PersonAdd
     }
 }
 

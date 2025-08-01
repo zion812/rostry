@@ -229,7 +229,7 @@ private fun FarmHeaderCard(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Verified,
+                                        imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
                                         modifier = Modifier.size(12.dp)
                                     )
@@ -355,7 +355,7 @@ private fun FarmOverviewCards(
                     OverviewMetricCard(
                         title = "Total Fowls",
                         value = totalFowls.toString(),
-                        icon = Icons.Default.Pets,
+                        icon = Icons.Default.Home,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -468,7 +468,7 @@ private fun QuickActionsRow(
                 item {
                     QuickActionCard(
                         title = "Growth",
-                        icon = Icons.Default.TrendingUp,
+                        icon = Icons.Default.ArrowUpward,
                         onClick = onUpdateGrowth
                     )
                 }

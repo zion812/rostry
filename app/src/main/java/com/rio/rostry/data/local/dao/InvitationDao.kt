@@ -172,20 +172,22 @@ interface InvitationDao {
     // ==================== INVITATION ANALYTICS ====================
 
     /**
-     * Get invitation statistics for farm
+     * Get total invitation count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalInvitations,
-            COUNT(CASE WHEN status = 'SENT' THEN 1 END) as pendingInvitations,
-            COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) as acceptedInvitations,
-            COUNT(CASE WHEN status = 'REJECTED' THEN 1 END) as rejectedInvitations,
-            COUNT(CASE WHEN status = 'EXPIRED' THEN 1 END) as expiredInvitations,
-            AVG(CASE WHEN respondedAt IS NOT NULL THEN respondedAt - sentAt END) as avgResponseTime
-        FROM farm_invitations 
-        WHERE farmId = :farmId
-    """)
-    suspend fun getInvitationStatistics(farmId: String): Map<String, Any>
+    @Query("SELECT COUNT(*) FROM farm_invitations WHERE farmId = :farmId")
+    suspend fun getTotalInvitationCount(farmId: String): Int
+
+    /**
+     * Get accepted invitation count
+     */
+    @Query("SELECT COUNT(*) FROM farm_invitations WHERE farmId = :farmId AND status = 'ACCEPTED'")
+    suspend fun getAcceptedInvitationCount(farmId: String): Int
+
+    /**
+     * Get pending invitation count
+     */
+    @Query("SELECT COUNT(*) FROM farm_invitations WHERE farmId = :farmId AND status = 'SENT'")
+    suspend fun getPendingInvitationCount(farmId: String): Int
 
     /**
      * Get invitation acceptance rate
@@ -201,34 +203,23 @@ interface InvitationDao {
     suspend fun getAcceptanceRate(farmId: String): Double
 
     /**
-     * Get invitation trends
+     * Get invitation count by role
      */
-    @Query("""
-        SELECT 
-            strftime('%Y-%m', datetime(sentAt/1000, 'unixepoch')) as month,
-            COUNT(*) as invitationsSent,
-            COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) as acceptedCount
-        FROM farm_invitations 
-        WHERE farmId = :farmId 
-        AND sentAt >= :startDate
-        GROUP BY strftime('%Y-%m', datetime(sentAt/1000, 'unixepoch'))
-        ORDER BY month DESC
-    """)
-    suspend fun getInvitationTrends(
-        farmId: String, 
-        startDate: Long = System.currentTimeMillis() - (365 * 24 * 60 * 60 * 1000L)
-    ): List<Map<String, Any>>
+    @Query("SELECT COUNT(*) FROM farm_invitations WHERE farmId = :farmId AND proposedRole = :role")
+    suspend fun getInvitationCountByRole(farmId: String, role: String): Int
 
     /**
-     * Get role distribution of invitations
+     * Get recent invitation count
      */
     @Query("""
-        SELECT proposedRole, COUNT(*) as count 
-        FROM farm_invitations 
+        SELECT COUNT(*) FROM farm_invitations 
         WHERE farmId = :farmId 
-        GROUP BY proposedRole
+        AND sentAt >= :startDate
     """)
-    suspend fun getInvitationRoleDistribution(farmId: String): Map<FarmRole, Int>
+    suspend fun getRecentInvitationCount(
+        farmId: String, 
+        startDate: Long = System.currentTimeMillis() - (30 * 24 * 60 * 60 * 1000L)
+    ): Int
 
     // ==================== INVITATION TEMPLATES ====================
 
@@ -358,19 +349,19 @@ interface InvitationDao {
     fun getInvitationEventHistory(invitationId: String): Flow<List<InvitationAnalytics>>
 
     /**
-     * Get event counts by type
+     * Get event count by type
      */
     @Query("""
-        SELECT event, COUNT(*) as count 
-        FROM invitation_analytics 
+        SELECT COUNT(*) FROM invitation_analytics 
         WHERE farmId = :farmId 
+        AND event = :eventType
         AND timestamp >= :startDate
-        GROUP BY event
     """)
-    suspend fun getEventCounts(
+    suspend fun getEventCountByType(
         farmId: String, 
+        eventType: String,
         startDate: Long = System.currentTimeMillis() - (30 * 24 * 60 * 60 * 1000L)
-    ): Map<InvitationEvent, Int>
+    ): Int
 
     // ==================== SEARCH AND FILTERING ====================
 
@@ -442,22 +433,18 @@ interface InvitationDao {
     // ==================== DASHBOARD QUERIES ====================
 
     /**
-     * Get invitation dashboard summary
+     * Get active invitation count
      */
     @Query("""
-        SELECT 
-            COUNT(*) as totalInvitations,
-            COUNT(CASE WHEN status = 'SENT' AND expiresAt > :currentTime THEN 1 END) as activeInvitations,
-            COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) as acceptedInvitations,
-            COUNT(CASE WHEN sentAt >= :recentThreshold THEN 1 END) as recentInvitations
-        FROM farm_invitations 
-        WHERE farmId = :farmId
+        SELECT COUNT(*) FROM farm_invitations 
+        WHERE farmId = :farmId 
+        AND status = 'SENT' 
+        AND expiresAt > :currentTime
     """)
-    suspend fun getInvitationDashboardSummary(
+    suspend fun getActiveInvitationCount(
         farmId: String,
-        currentTime: Long = System.currentTimeMillis(),
-        recentThreshold: Long = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
-    ): Map<String, Int>
+        currentTime: Long = System.currentTimeMillis()
+    ): Int
 
     /**
      * Get recent invitation activity

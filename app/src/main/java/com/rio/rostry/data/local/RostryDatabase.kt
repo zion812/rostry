@@ -33,6 +33,7 @@ import com.rio.rostry.data.model.*
         FowlLifecycle::class,
         FowlLineage::class,
         VaccinationRecord::class,
+        Bloodline::class,
         // Farm Access Management Entities
         FarmAccess::class,
         FarmInvitation::class,
@@ -671,6 +672,26 @@ abstract class RostryDatabase : RoomDatabase() {
                             deviceType TEXT NOT NULL DEFAULT '',
                             location TEXT NOT NULL DEFAULT '',
                             additionalData TEXT NOT NULL DEFAULT '{}'
+                        )
+                    """)
+
+                    // Create bloodlines table
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS bloodlines (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            name TEXT NOT NULL,
+                            originFowlId TEXT NOT NULL,
+                            founderGeneration INTEGER NOT NULL DEFAULT 1,
+                            characteristics TEXT NOT NULL DEFAULT '[]',
+                            totalGenerations INTEGER NOT NULL DEFAULT 1,
+                            activeBreeders INTEGER NOT NULL DEFAULT 0,
+                            totalOffspring INTEGER NOT NULL DEFAULT 0,
+                            performanceMetrics TEXT,
+                            geneticDiversity REAL NOT NULL DEFAULT 1.0,
+                            breedingGoals TEXT NOT NULL DEFAULT '[]',
+                            certificationLevel TEXT NOT NULL DEFAULT 'UNVERIFIED',
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
                     """)
 

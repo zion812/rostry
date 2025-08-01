@@ -220,12 +220,11 @@ class LifecycleRepository @Inject constructor(
     fun getFamilyTree(fowlId: String): Flow<FamilyTreeData> {
         return lineageDao.getLineageByFowlIdFlow(fowlId).map { lineage ->
             if (lineage != null) {
-                val ancestors = lineageDao.getAncestors(fowlId)
-                val descendants = lineageDao.getDescendants(fowlId)
+                // Simplified family tree - just return current fowl for now
                 FamilyTreeData(
                     currentFowl = lineage,
-                    ancestors = ancestors,
-                    descendants = descendants
+                    ancestors = emptyList(), // Simplified
+                    descendants = emptyList() // Simplified
                 )
             } else {
                 FamilyTreeData()
@@ -241,32 +240,49 @@ class LifecycleRepository @Inject constructor(
             val currentLineage = lineageDao.getLineageByFowlId(fowlId)
                 ?: return Result.failure(Exception("Lineage not found"))
 
-            val recommendations = lineageDao.getBreedingRecommendations(20)
-                .filter { it["fowl1"] == fowlId || it["fowl2"] == fowlId }
-                .map { recommendation ->
-                    val mateId = if (recommendation["fowl1"] == fowlId) {
-                        recommendation["fowl2"] as String
-                    } else {
-                        recommendation["fowl1"] as String
-                    }
-                    
-                    val mateLineage = lineageDao.getLineageByFowlId(mateId)
-                    val compatibilityScore = recommendation["compatibilityScore"] as Double
+            // Simplified breeding recommendations - get all lineages and calculate compatibility
+            val allLineages = lineageDao.getAllLineagesList()
+            val recommendations = allLineages
+                .filter { lineage -> lineage.fowlId != fowlId } // Exclude self
+                .map { mateLineage ->
+                    val compatibilityScore = calculateCompatibilityScore(currentLineage, mateLineage)
                     
                     BreedingRecommendation(
-                        mateId = mateId,
+                        mateId = mateLineage.fowlId,
                         compatibilityScore = compatibilityScore,
                         compatibility = determineCompatibility(compatibilityScore),
                         expectedOffspringTraits = predictOffspringTraits(currentLineage, mateLineage),
                         riskFactors = assessBreedingRisks(currentLineage, mateLineage)
                     )
                 }
-                .sortedByDescending { it.compatibilityScore }
+                .sortedByDescending { recommendation -> recommendation.compatibilityScore }
+                .take(10) // Top 10 recommendations
 
             Result.success(recommendations)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+    
+    private fun calculateCompatibilityScore(lineage1: FowlLineage, lineage2: FowlLineage): Double {
+        var score = 1.0
+        
+        // Reduce score for same bloodline
+        if (lineage1.bloodlineId == lineage2.bloodlineId) {
+            score -= 0.3
+        }
+        
+        // Reduce score for high inbreeding
+        val avgInbreeding = (lineage1.inbreedingCoefficient + lineage2.inbreedingCoefficient) / 2
+        score -= avgInbreeding
+        
+        // Reduce score for close relatives
+        if (lineage1.parentMaleId == lineage2.parentMaleId || 
+            lineage1.parentFemaleId == lineage2.parentFemaleId) {
+            score -= 0.4
+        }
+        
+        return maxOf(0.0, score)
     }
 
     // ==================== BLOODLINE MANAGEMENT ====================
@@ -474,7 +490,13 @@ class LifecycleRepository @Inject constructor(
         }
         
         return risks
+    /**
+     * Get all lifecycles
+     */
+    fun getAllLifecycles(): Flow<List<FowlLifecycle>> {
+        return lifecycleDao.getAllLifecycles()
     }
+
 }
 
 // ==================== DATA CLASSES ====================

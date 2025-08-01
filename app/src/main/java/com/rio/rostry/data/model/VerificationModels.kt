@@ -10,16 +10,6 @@ enum class VerificationType {
     FARM           // Farm verification
 }
 
-enum class VerificationStatus {
-    UNVERIFIED,     // Not verified
-    PENDING,        // Verification request submitted
-    UNDER_REVIEW,   // Being reviewed by admin
-    VERIFIED,       // Successfully verified
-    APPROVED,       // Approved (alias for VERIFIED)
-    REJECTED,       // Verification rejected
-    EXPIRED         // Verification expired
-}
-
 @Entity(tableName = "verification_requests")
 data class VerificationRequest(
     @PrimaryKey

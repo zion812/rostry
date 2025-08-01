@@ -181,37 +181,28 @@ interface FlockDao {
     ): Flow<List<Flock>>
 
     /**
-     * Get flock statistics
+     * Get total flock count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalFlocks,
-            SUM(activeCount) as totalFowls,
-            AVG(activeCount) as averageFlockSize,
-            AVG(averageAge) as averageAge,
-            COUNT(CASE WHEN healthStatus = 'HEALTHY' THEN 1 END) as healthyFlocks,
-            AVG((totalCount - activeCount) * 100.0 / NULLIF(totalCount, 0)) as averageMortalityRate
-        FROM flocks 
-        WHERE isActive = 1
-    """)
-    suspend fun getFlockStatistics(): Map<String, Double>
+    @Query("SELECT COUNT(*) FROM flocks WHERE isActive = 1")
+    suspend fun getTotalFlockCount(): Int
 
     /**
-     * Get production summary for laying hens
+     * Get total fowl count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as layingFlocks,
-            SUM(activeCount) as totalLayingHens,
-            AVG(json_extract(productionMetrics, '$.eggProductionRate')) as avgProductionRate,
-            AVG(json_extract(productionMetrics, '$.averageEggWeight')) as avgEggWeight,
-            AVG(json_extract(productionMetrics, '$.feedConversionRatio')) as avgFeedConversion
-        FROM flocks 
-        WHERE flockType = 'LAYING_HENS' 
-        AND isActive = 1
-        AND productionMetrics IS NOT NULL
-    """)
-    suspend fun getProductionSummary(): Map<String, Double>
+    @Query("SELECT SUM(activeCount) FROM flocks WHERE isActive = 1")
+    suspend fun getTotalActiveFowlCount(): Int
+
+    /**
+     * Get average flock size
+     */
+    @Query("SELECT AVG(activeCount) FROM flocks WHERE isActive = 1")
+    suspend fun getAverageFlockSize(): Double
+
+    /**
+     * Get healthy flock count
+     */
+    @Query("SELECT COUNT(*) FROM flocks WHERE healthStatus = 'HEALTHY' AND isActive = 1")
+    suspend fun getHealthyFlockCount(): Int
 
     /**
      * Get flocks with overdue vaccinations
@@ -322,43 +313,22 @@ interface FlockDao {
     suspend fun deactivateFlock(flockId: String, timestamp: Long = System.currentTimeMillis())
 
     /**
-     * Get flock count by type
+     * Get flock count by type - simplified
      */
-    @Query("""
-        SELECT flockType, COUNT(*) as count 
-        FROM flocks 
-        WHERE isActive = 1 
-        GROUP BY flockType
-    """)
-    suspend fun getFlockCountByType(): Map<FlockType, Int>
+    @Query("SELECT COUNT(*) FROM flocks WHERE flockType = :flockType AND isActive = 1")
+    suspend fun getFlockCountByType(flockType: String): Int
 
     /**
-     * Get flock count by health status
+     * Get flock count by health status - simplified
      */
-    @Query("""
-        SELECT healthStatus, COUNT(*) as count 
-        FROM flocks 
-        WHERE isActive = 1 
-        GROUP BY healthStatus
-    """)
-    suspend fun getFlockCountByHealthStatus(): Map<FlockHealthStatus, Int>
+    @Query("SELECT COUNT(*) FROM flocks WHERE healthStatus = :healthStatus AND isActive = 1")
+    suspend fun getFlockCountByHealthStatus(healthStatus: String): Int
 
     /**
-     * Get total fowl count
+     * Get average flock size by type - simplified
      */
-    @Query("SELECT SUM(activeCount) FROM flocks WHERE isActive = 1")
-    suspend fun getTotalFowlCount(): Int
-
-    /**
-     * Get average flock size by type
-     */
-    @Query("""
-        SELECT flockType, AVG(activeCount) as avgSize 
-        FROM flocks 
-        WHERE isActive = 1 
-        GROUP BY flockType
-    """)
-    suspend fun getAverageFlockSizeByType(): Map<FlockType, Double>
+    @Query("SELECT AVG(activeCount) FROM flocks WHERE flockType = :flockType AND isActive = 1")
+    suspend fun getAverageFlockSizeByType(flockType: String): Double
 
     /**
      * Delete old inactive flocks
@@ -398,22 +368,8 @@ interface FlockDao {
     fun getFlocksByFacilityUtilization(): Flow<List<Flock>>
 
     /**
-     * Get monthly production trends
+     * Get laying hen count
      */
-    @Query("""
-        SELECT 
-            strftime('%Y-%m', datetime(createdAt/1000, 'unixepoch')) as month,
-            COUNT(*) as flockCount,
-            SUM(activeCount) as totalFowls,
-            AVG(json_extract(productionMetrics, '$.eggProductionRate')) as avgProduction
-        FROM flocks 
-        WHERE flockType = 'LAYING_HENS' 
-        AND isActive = 1
-        AND createdAt >= :startDate
-        GROUP BY strftime('%Y-%m', datetime(createdAt/1000, 'unixepoch'))
-        ORDER BY month DESC
-    """)
-    suspend fun getMonthlyProductionTrends(
-        startDate: Long = System.currentTimeMillis() - (365 * 24 * 60 * 60 * 1000L) // 1 year ago
-    ): List<Map<String, Any>>
+    @Query("SELECT COUNT(*) FROM flocks WHERE flockType = 'LAYING_HENS' AND isActive = 1")
+    suspend fun getLayingHenCount(): Int
 }

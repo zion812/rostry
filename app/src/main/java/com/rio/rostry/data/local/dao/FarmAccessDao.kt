@@ -222,73 +222,28 @@ interface FarmAccessDao {
     // ==================== ANALYTICS AND REPORTING ====================
 
     /**
-     * Get farm access statistics
+     * Get total user count
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as totalUsers,
-            COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) as activeUsers,
-            COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pendingUsers,
-            COUNT(CASE WHEN role = 'OWNER' THEN 1 END) as owners,
-            COUNT(CASE WHEN role = 'MANAGER' THEN 1 END) as managers,
-            COUNT(CASE WHEN role = 'WORKER' THEN 1 END) as workers,
-            COUNT(CASE WHEN lastAccessedAt > :recentThreshold THEN 1 END) as recentlyActive
-        FROM farm_access 
-        WHERE farmId = :farmId AND isActive = 1
-    """)
-    suspend fun getFarmAccessStatistics(
-        farmId: String, 
-        recentThreshold: Long = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
-    ): Map<String, Int>
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND isActive = 1")
+    suspend fun getTotalUserCount(farmId: String): Int
 
     /**
-     * Get role distribution
+     * Get active user count
      */
-    @Query("""
-        SELECT role, COUNT(*) as count 
-        FROM farm_access 
-        WHERE farmId = :farmId 
-        AND isActive = 1 
-        AND status = 'ACCEPTED'
-        GROUP BY role
-    """)
-    suspend fun getRoleDistribution(farmId: String): Map<FarmRole, Int>
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND status = 'ACCEPTED' AND isActive = 1")
+    suspend fun getActiveUserCount(farmId: String): Int
 
     /**
-     * Get access trends over time
+     * Get pending user count
      */
-    @Query("""
-        SELECT 
-            strftime('%Y-%m', datetime(acceptedAt/1000, 'unixepoch')) as month,
-            COUNT(*) as newUsers
-        FROM farm_access 
-        WHERE farmId = :farmId 
-        AND status = 'ACCEPTED'
-        AND acceptedAt >= :startDate
-        GROUP BY strftime('%Y-%m', datetime(acceptedAt/1000, 'unixepoch'))
-        ORDER BY month DESC
-    """)
-    suspend fun getAccessTrends(
-        farmId: String, 
-        startDate: Long = System.currentTimeMillis() - (365 * 24 * 60 * 60 * 1000L)
-    ): List<Map<String, Any>>
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND status = 'PENDING'")
+    suspend fun getPendingUserCount(farmId: String): Int
 
     /**
-     * Get user activity summary
+     * Get user count by role
      */
-    @Query("""
-        SELECT 
-            userId,
-            role,
-            lastAccessedAt,
-            (julianday('now') - julianday(datetime(lastAccessedAt/1000, 'unixepoch'))) as daysSinceLastAccess
-        FROM farm_access 
-        WHERE farmId = :farmId 
-        AND isActive = 1 
-        AND status = 'ACCEPTED'
-        ORDER BY lastAccessedAt DESC
-    """)
-    suspend fun getUserActivitySummary(farmId: String): List<Map<String, Any>>
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND role = :role AND isActive = 1")
+    suspend fun getUserCountByRole(farmId: String, role: String): Int
 
     // ==================== PERMISSION REQUESTS ====================
 
@@ -412,55 +367,52 @@ interface FarmAccessDao {
     // ==================== SEARCH AND FILTERING ====================
 
     /**
-     * Search farm access records
-     */
-    @Query("""
-        SELECT fa.* FROM farm_access fa
-        INNER JOIN users u ON fa.userId = u.id
-        WHERE fa.farmId = :farmId 
-        AND fa.isActive = 1
-        AND (u.name LIKE '%' || :query || '%' 
-             OR u.email LIKE '%' || :query || '%'
-             OR fa.role LIKE '%' || :query || '%')
-        ORDER BY fa.lastAccessedAt DESC
-    """)
-    fun searchFarmAccess(farmId: String, query: String): Flow<List<FarmAccess>>
-
-    /**
-     * Filter access by multiple criteria
+     * Search farm access records by role
      */
     @Query("""
         SELECT * FROM farm_access 
         WHERE farmId = :farmId 
-        AND (:role IS NULL OR role = :role)
-        AND (:status IS NULL OR status = :status)
-        AND (:isActive IS NULL OR isActive = :isActive)
-        AND (:fromDate IS NULL OR acceptedAt >= :fromDate)
-        AND (:toDate IS NULL OR acceptedAt <= :toDate)
-        ORDER BY acceptedAt DESC
+        AND role LIKE '%' || :query || '%'
+        AND isActive = 1
+        ORDER BY lastAccessedAt DESC
     """)
-    fun filterFarmAccess(
-        farmId: String,
-        role: FarmRole? = null,
-        status: AccessStatus? = null,
-        isActive: Boolean? = null,
-        fromDate: Long? = null,
-        toDate: Long? = null
-    ): Flow<List<FarmAccess>>
+    fun searchFarmAccessByRole(farmId: String, query: String): Flow<List<FarmAccess>>
 
     /**
-     * Get access summary for dashboard
+     * Get access count by status
+     */
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND status = :status")
+    suspend fun getAccessCountByStatus(farmId: String, status: String): Int
+
+    // ==================== MISSING METHODS FOR ANALYTICS ====================
+
+    /**
+     * Get total users for farm
+     */
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND isActive = 1")
+    suspend fun getTotalUsersForFarm(farmId: String): Int
+
+    /**
+     * Get active users for farm
+     */
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND status = 'ACCEPTED' AND isActive = 1")
+    suspend fun getActiveUsersForFarm(farmId: String): Int
+
+    /**
+     * Get pending users for farm
+     */
+    @Query("SELECT COUNT(*) FROM farm_access WHERE farmId = :farmId AND status = 'PENDING'")
+    suspend fun getPendingUsersForFarm(farmId: String): Int
+
+    /**
+     * Get role distribution for farm
      */
     @Query("""
-        SELECT 
-            role,
-            status,
-            COUNT(*) as count,
-            MAX(lastAccessedAt) as lastActivity
+        SELECT role as role, COUNT(*) as count 
         FROM farm_access 
-        WHERE farmId = :farmId 
-        GROUP BY role, status
-        ORDER BY role, status
+        WHERE farmId = :farmId AND isActive = 1 AND status = 'ACCEPTED'
+        GROUP BY role
+        ORDER BY count DESC
     """)
-    suspend fun getAccessSummary(farmId: String): List<Map<String, Any>>
+    suspend fun getRoleDistributionForFarm(farmId: String): List<RoleCount>
 }

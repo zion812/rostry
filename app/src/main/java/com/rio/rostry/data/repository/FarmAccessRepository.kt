@@ -69,7 +69,7 @@ class FarmAccessRepository @Inject constructor(
                 farmId = farmId,
                 farmName = farm.farmName,
                 inviterUserId = inviterUserId,
-                inviterName = inviter.name,
+                inviterName = inviter.displayName,
                 inviterEmail = inviter.email,
                 inviteeEmail = inviteeEmail,
                 inviteeUserId = inviteeUser?.id,
@@ -529,19 +529,34 @@ class FarmAccessRepository @Inject constructor(
      * Get farm access analytics
      */
     suspend fun getFarmAccessAnalytics(farmId: String): FarmAccessAnalytics {
-        val statistics = farmAccessDao.getFarmAccessStatistics(farmId)
-        val roleDistribution = farmAccessDao.getRoleDistribution(farmId)
-        val accessTrends = farmAccessDao.getAccessTrends(farmId)
-        val invitationStats = invitationDao.getInvitationStatistics(farmId)
+        val totalUsers = farmAccessDao.getTotalUserCount(farmId)
+        val activeUsers = farmAccessDao.getActiveUserCount(farmId)
+        val pendingUsers = farmAccessDao.getPendingUserCount(farmId)
+        
+        // Get role distribution by querying each role
+        val roleDistribution = mapOf(
+            FarmRole.OWNER to farmAccessDao.getUserCountByRole(farmId, "OWNER"),
+            FarmRole.MANAGER to farmAccessDao.getUserCountByRole(farmId, "MANAGER"),
+            FarmRole.WORKER to farmAccessDao.getUserCountByRole(farmId, "WORKER")
+        )
+
+        // Get invitation statistics
+        val totalInvitations = invitationDao.getTotalInvitationCount(farmId)
+        val acceptedInvitations = invitationDao.getAcceptedInvitationCount(farmId)
+        val pendingInvitations = invitationDao.getPendingInvitationCount(farmId)
 
         return FarmAccessAnalytics(
             farmId = farmId,
-            totalUsers = statistics["totalUsers"] ?: 0,
-            activeUsers = statistics["activeUsers"] ?: 0,
-            pendingUsers = statistics["pendingUsers"] ?: 0,
+            totalUsers = totalUsers,
+            activeUsers = activeUsers,
+            pendingUsers = pendingUsers,
             roleDistribution = roleDistribution,
-            accessTrends = accessTrends,
-            invitationStatistics = invitationStats,
+            accessTrends = emptyList(), // Simplified for now
+            invitationStatistics = mapOf(
+                "total" to totalInvitations,
+                "accepted" to acceptedInvitations,
+                "pending" to pendingInvitations
+            ),
             lastCalculated = System.currentTimeMillis()
         )
     }
@@ -701,21 +716,9 @@ enum class AlertSeverity {
 }
 
 // Placeholder interfaces (implement based on your existing architecture)
-interface UserRepository {
-    suspend fun getUserById(userId: String): User?
-    suspend fun getUserByEmail(email: String): User?
-}
-
 interface NotificationService {
     suspend fun sendInvitationEmail(invitation: FarmInvitation)
     suspend fun sendWelcomeNotification(access: FarmAccess, farmName: String)
     suspend fun sendRoleChangeNotification(access: FarmAccess, previousRole: FarmRole)
     suspend fun sendAccessRevokedNotification(access: FarmAccess)
 }
-
-data class User(
-    val id: String,
-    val name: String,
-    val email: String,
-    val profileImageUrl: String = ""
-)

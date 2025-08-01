@@ -18,7 +18,7 @@ data class User(
     val bio: String = "",
     val isKycVerified: Boolean = false,
     val kycDocumentUrl: String = "",
-    val verificationStatus: VerificationStatus = VerificationStatus.UNVERIFIED,
+    val verificationStatus: VerificationStatus = VerificationStatus.PENDING,
     val verificationBadges: List<String> = emptyList(), // "breeder", "farm", "premium"
     val coinBalance: Int = 0,
     val totalCoinsEarned: Int = 0,
