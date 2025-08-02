@@ -490,6 +490,8 @@ class LifecycleRepository @Inject constructor(
         }
         
         return risks
+    }
+
     /**
      * Get all lifecycles
      */

@@ -122,7 +122,7 @@ ROSTRY is a production-ready Android application for fowl management and marketp
 // Data Management
 ├── Repositories (15+ implementations including farm management)
 ├── Data Sources (Local + Remote with farm collections)
-├── Room Database (25+ entities with farm access control)
+├── Room Database (28 entities with farm access control)
 └── Firebase Integration (enhanced with farm management)
 ```
 
@@ -139,31 +139,55 @@ ROSTRY is a production-ready Android application for fowl management and marketp
 
 ### Local Database (Room) - Version 7 ⭐ **UPDATED**
 
-#### Entities (15 total)
+#### Entities (28 total) ⭐ **UPDATED**
 ```kotlin
 @Database(
     entities = [
+        // Core User & Social Entities
         User::class,                    // User profiles
-        Fowl::class,                    // Core fowl entities
         Post::class,                    // Social posts
         Chat::class,                    // Chat conversations
         Message::class,                 // Chat messages
-        CartItem::class,                // Shopping cart
+
+        // Fowl Management Entities
+        Fowl::class,                    // Core fowl entities
         FowlRecord::class,              // Health records
-        TransferLog::class,             // Ownership transfers
+        FowlLifecycle::class,           // Lifecycle tracking
+        FowlLineage::class,             // Breeding lineage
+        VaccinationRecord::class,       // Vaccination tracking
+        Bloodline::class,               // Bloodline management
+
+        // Farm Management Entities
+        Farm::class,                    // Farm entities
+        Flock::class,                   // Flock management
+        FlockSummary::class,            // Dashboard data
+
+        // Farm Access & Collaboration
+        FarmAccess::class,              // Access control
+        FarmInvitation::class,          // Invitation system
+        InvitationTemplate::class,      // Invitation templates
+        BulkInvitation::class,          // Bulk invitations
+        AccessAuditLog::class,          // Audit logging
+        PermissionRequest::class,       // Permission requests
+        InvitationAnalytics::class,     // Invitation analytics
+
+        // Marketplace & Commerce
+        CartItem::class,                // Shopping cart
         MarketplaceListing::class,      // Marketplace items
         Order::class,                   // Purchase orders
+        TransferLog::class,             // Ownership transfers
+
+        // Wallet & Verification
         Wallet::class,                  // User wallets
         CoinTransaction::class,         // Transaction history
         VerificationRequest::class,     // KYC requests
-        ShowcaseSlot::class,           // Premium features
-        FlockSummary::class            // Dashboard data
+        ShowcaseSlot::class            // Premium features
     ],
-    version = 6
+    version = 7
 )
 ```
 
-#### Data Access Objects (14 DAOs)
+#### Data Access Objects (22+ DAOs) ⭐ **UPDATED**
 - `UserDao` - User management operations
 - `FowlDao` - Fowl CRUD operations
 - `PostDao` - Social post operations

@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.rio.rostry.ui.components.ShimmerFowlCard
+import com.rio.rostry.ui.components.ShimmerComponents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +64,7 @@ fun MyFowlsScreen(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(6) { // Show 6 shimmer cards while loading
-                    ShimmerFowlCard()
+                    ShimmerComponents.ShimmerFowlCard()
                 }
             }
         } else if (uiState.fowls.isEmpty()) {

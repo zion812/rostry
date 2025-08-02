@@ -1,8 +1,8 @@
 # ROSTRY Documentation Update Summary
 
-> **Update Date**: 2025-01-08  
-> **Update Version**: 2.0.0  
-> **Status**: ✅ Complete  
+> **Update Date**: 2025-01-08
+> **Update Version**: 2.1.0
+> **Status**: ✅ Complete - Critical Fixes Applied
 
 ## 📋 Overview
 
@@ -16,13 +16,22 @@ This document summarizes the comprehensive documentation updates performed to al
 3. **Navigation Updates**: FarmManagementNavigation.kt added 11 new destinations not reflected in documentation
 4. **Repository Implementations**: New repositories (FarmRepository, FarmAccessRepository) were implemented but not documented
 
-### Implemented but Undocumented Features
+### Critical Issues Fixed in v2.1.0
+- **Missing Entities**: VaccinationRecord and Bloodline entities were in database but not documented
+- **Missing Migration**: DatabaseModule.kt was missing MIGRATION_6_7 reference
+- **Incorrect Entity Counts**: Documentation showed 25+ entities but actual count is 28
+- **Missing Data Models**: Analytics data classes were not documented
+- **Database Inconsistencies**: Schema documentation didn't match actual implementation
+
+### Implemented but Previously Undocumented Features
 - **Farm Management System** with comprehensive farm operations
 - **Farm Access Control** with role-based permissions (25+ permissions)
 - **Multi-user Collaboration** with invitation system
 - **Flock Management** with health monitoring and production metrics
 - **Farm Analytics** with interactive dashboards
 - **Access Audit Logging** for security and compliance
+- **Vaccination Management** with comprehensive tracking
+- **Bloodline Management** with genetic diversity analysis
 
 ## 📚 Documentation Files Updated
 

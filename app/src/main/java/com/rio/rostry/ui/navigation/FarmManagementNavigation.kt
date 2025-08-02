@@ -44,11 +44,7 @@ fun FarmManagementNavigation(
 
         // Lifecycle Analytics
         composable(FarmManagementDestinations.ANALYTICS) {
-            LifecycleAnalyticsScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
+            LifecycleAnalyticsScreen()
         }
 
         // Lifecycle Management

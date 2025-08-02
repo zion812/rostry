@@ -388,6 +388,121 @@ data class FarmInvitation(
 )
 ```
 
+#### VaccinationRecord Entity
+```kotlin
+@Entity(tableName = "vaccination_records")
+data class VaccinationRecord(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val flockId: String? = null,
+    val fowlId: String? = null,
+    val vaccineName: String,
+    val vaccineType: VaccineType,
+    val administrationDate: Long,
+    val nextDueDate: Long = 0,
+    val dosage: String = "",
+    val administrationMethod: AdministrationMethod = AdministrationMethod.INJECTION,
+    val administeredBy: String = "",
+    val batchNumber: String = "",
+    val manufacturer: String = "",
+    val expiryDate: Long = 0,
+    val storageTemperature: String = "",
+    val proofImageUrl: String = "",
+    val notes: String = "",
+    val sideEffects: String = "",
+    val efficacy: Double = 0.0, // percentage
+    val cost: Double = 0.0,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+#### Bloodline Entity
+```kotlin
+@Entity(tableName = "bloodlines")
+data class Bloodline(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val originFowlId: String,
+    val founderGeneration: Int = 1,
+    val characteristics: List<String> = emptyList(),
+    val totalGenerations: Int = 1,
+    val activeBreeders: Int = 0,
+    val totalOffspring: Int = 0,
+    val performanceMetrics: BloodlineMetrics? = null,
+    val geneticDiversity: Double = 1.0,
+    val breedingGoals: List<String> = emptyList(),
+    val certificationLevel: String = "UNVERIFIED",
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+) {
+    fun calculateBloodlineStrength(): BloodlineStrength {
+        val metrics = performanceMetrics ?: return BloodlineStrength.UNKNOWN
+
+        val avgScore = (
+            (metrics.survivalRate / 100) * 0.3 +
+            (metrics.breedingSuccessRate / 100) * 0.3 +
+            (geneticDiversity) * 0.2 +
+            (if (totalGenerations >= 3) 0.2 else 0.1)
+        )
+
+        return when {
+            avgScore >= 0.9 -> BloodlineStrength.EXCEPTIONAL
+            avgScore >= 0.8 -> BloodlineStrength.STRONG
+            avgScore >= 0.7 -> BloodlineStrength.GOOD
+            avgScore >= 0.6 -> BloodlineStrength.AVERAGE
+            else -> BloodlineStrength.WEAK
+        }
+    }
+}
+```
+
+### Analytics Data Classes ⭐ **NEW**
+
+#### Farm Analytics Data Classes
+```kotlin
+data class FlockTypeCount(
+    val flockType: String,
+    val count: Int
+)
+
+data class FlockHealthCount(
+    val healthStatus: String,
+    val count: Int
+)
+
+data class LifecycleStageCount(
+    val currentStage: String,
+    val count: Int
+)
+
+data class LineageStatistics(
+    val totalLineages: Int,
+    val verifiedCount: Int,
+    val avgGeneration: Double,
+    val maxGeneration: Int,
+    val avgInbreeding: Double
+)
+
+data class FarmAccessStatistics(
+    val totalUsers: Int,
+    val activeUsers: Int,
+    val pendingUsers: Int,
+    val owners: Int,
+    val managers: Int,
+    val workers: Int,
+    val recentlyActive: Int
+)
+
+data class InvitationStatistics(
+    val totalInvitations: Int,
+    val pendingInvitations: Int,
+    val acceptedInvitations: Int,
+    val rejectedInvitations: Int,
+    val expiredInvitations: Int,
+    val avgResponseTime: Double
+)
+```
+
 ### Core Entities
 
 #### Fowl Entity

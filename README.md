@@ -105,10 +105,10 @@ app/src/main/java/com/rio/rostry/
 ├── RostryApplication.kt              # Application class with Hilt
 ├── data/                             # Data layer
 │   ├── local/                        # Room database
-│   │   ├── dao/                      # Data Access Objects (20+ DAOs)
+│   │   ├── dao/                      # Data Access Objects (22+ DAOs)
 │   │   ├── RostryDatabase.kt         # Database configuration
 │   │   └── Converters.kt             # Type converters
-│   ├── model/                        # Data entities (25+ entities)
+│   ├── model/                        # Data entities (28 entities)
 │   └── repository/                   # Repository implementations (15+ repos)
 ├── di/                               # Dependency injection modules
 ├── domain/                           # Business logic layer
@@ -131,11 +131,11 @@ app/src/main/java/com/rio/rostry/
 ## 🗄️ Database Schema
 
 ### Room Database (Local Storage)
-- **25+ Entities**:
+- **28 Entities**:
   - **Core**: User, Fowl, Post, Chat, Message, CartItem, FowlRecord, TransferLog, MarketplaceListing, Order, Wallet, CoinTransaction, VerificationRequest, ShowcaseSlot, FlockSummary
-  - **Farm Management**: Farm, Flock, FowlLifecycle, FowlLineage
+  - **Farm Management**: Farm, Flock, FowlLifecycle, FowlLineage, VaccinationRecord, Bloodline
   - **Access Control**: FarmAccess, FarmInvitation, InvitationTemplate, BulkInvitation, AccessAuditLog, PermissionRequest, InvitationAnalytics
-- **20+ DAOs**: Comprehensive data access objects with farm management
+- **22+ DAOs**: Comprehensive data access objects with farm management
 - **Version**: 7 (with farm management migration support)
 
 ### Firebase Collections (Cloud Storage)

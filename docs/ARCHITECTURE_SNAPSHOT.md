@@ -85,10 +85,10 @@ com.rio.rostry/
 ├── ⚙️  config/                          # App configuration
 ├── 💾 data/                             # Data layer
 │   ├── local/                           # Local database (Room)
-│   │   ├── dao/                         # Data Access Objects (20+ DAOs)
+│   │   ├── dao/                         # Data Access Objects (22+ DAOs)
 │   │   ├── RostryDatabase.kt            # Room database configuration
 │   │   └── Converters.kt                # Type converters for Room
-│   ├── model/                           # Data models (25+ entities)
+│   ├── model/                           # Data models (28 entities)
 │   └── repository/                      # Repository implementations (15+ repos)
 ├── 🏢 domain/                           # Business logic layer
 ├── 🎨 ui/                               # Presentation layer
@@ -113,7 +113,7 @@ com.rio.rostry/
 
 ### **Hybrid Database Strategy: Room + Firestore**
 
-#### **Local Database (Room) - 25+ Entities** ⭐ **UPDATED**
+#### **Local Database (Room) - 28 Entities** ⭐ **UPDATED**
 ```kotlin
 @Database(
     entities = [

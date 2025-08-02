@@ -23,7 +23,7 @@ object DatabaseModule {
             RostryDatabase::class.java,
             "rostry_database"
         )
-        .addMigrations(RostryDatabase.MIGRATION_1_2, RostryDatabase.MIGRATION_2_3, RostryDatabase.MIGRATION_3_4, RostryDatabase.MIGRATION_4_5, RostryDatabase.MIGRATION_5_6)
+        .addMigrations(RostryDatabase.MIGRATION_1_2, RostryDatabase.MIGRATION_2_3, RostryDatabase.MIGRATION_3_4, RostryDatabase.MIGRATION_4_5, RostryDatabase.MIGRATION_5_6, RostryDatabase.MIGRATION_6_7)
         .fallbackToDestructiveMigration() // Allow destructive migration for development
         .build()
     }
@@ -96,5 +96,37 @@ object DatabaseModule {
     @Provides
     fun provideFlockSummaryDao(database: RostryDatabase): FlockSummaryDao {
         return database.flockSummaryDao()
+    }
+    
+    // Farm Management System DAOs
+    @Provides
+    fun provideFarmDao(database: RostryDatabase): FarmDao {
+        return database.farmDao()
+    }
+    
+    @Provides
+    fun provideFlockDao(database: RostryDatabase): FlockDao {
+        return database.flockDao()
+    }
+    
+    @Provides
+    fun provideLifecycleDao(database: RostryDatabase): LifecycleDao {
+        return database.lifecycleDao()
+    }
+    
+    @Provides
+    fun provideLineageDao(database: RostryDatabase): LineageDao {
+        return database.lineageDao()
+    }
+    
+    // Farm Access Management DAOs
+    @Provides
+    fun provideFarmAccessDao(database: RostryDatabase): FarmAccessDao {
+        return database.farmAccessDao()
+    }
+    
+    @Provides
+    fun provideInvitationDao(database: RostryDatabase): InvitationDao {
+        return database.invitationDao()
     }
 }

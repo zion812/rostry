@@ -147,4 +147,26 @@ object RepositoryModule {
     ): ReportRepository {
         return ReportRepository(firestore, fowlRepository, dashboardRepository)
     }
+    
+    @Provides
+    @Singleton
+    fun provideFarmRepository(
+        firestore: FirebaseFirestore,
+        storage: FirebaseStorage,
+        farmDao: FarmDao,
+        flockDao: FlockDao
+    ): FarmRepository {
+        return FarmRepository(firestore, storage, farmDao, flockDao)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideLifecycleRepository(
+        firestore: FirebaseFirestore,
+        storage: FirebaseStorage,
+        lifecycleDao: LifecycleDao,
+        lineageDao: LineageDao
+    ): LifecycleRepository {
+        return LifecycleRepository(firestore, storage, lifecycleDao, lineageDao)
+    }
 }

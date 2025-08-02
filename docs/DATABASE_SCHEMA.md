@@ -46,6 +46,8 @@ UI Updates ← Flow/LiveData ← Local DB ← Sync ← Cloud DB
         Farm::class,
         Flock::class,
         FlockSummary::class,
+        VaccinationRecord::class,
+        Bloodline::class,
 
         // Farm Access & Collaboration
         FarmAccess::class,
@@ -278,7 +280,59 @@ CREATE TABLE flocks (
 );
 ```
 
-#### 10. Farm Access Table
+#### 10. VaccinationRecord Table
+```sql
+CREATE TABLE vaccination_records (
+    id TEXT PRIMARY KEY NOT NULL,
+    flockId TEXT,
+    fowlId TEXT,
+    vaccineName TEXT NOT NULL,
+    vaccineType TEXT NOT NULL,
+    administrationDate INTEGER NOT NULL,
+    nextDueDate INTEGER NOT NULL DEFAULT 0,
+    dosage TEXT NOT NULL DEFAULT '',
+    administrationMethod TEXT NOT NULL DEFAULT 'INJECTION',
+    administeredBy TEXT NOT NULL DEFAULT '',
+    batchNumber TEXT NOT NULL DEFAULT '',
+    manufacturer TEXT NOT NULL DEFAULT '',
+    expiryDate INTEGER NOT NULL DEFAULT 0,
+    storageTemperature TEXT NOT NULL DEFAULT '',
+    proofImageUrl TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    sideEffects TEXT NOT NULL DEFAULT '',
+    efficacy REAL NOT NULL DEFAULT 0.0,
+    cost REAL NOT NULL DEFAULT 0.0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+
+    FOREIGN KEY(flockId) REFERENCES flocks(id) ON DELETE CASCADE,
+    FOREIGN KEY(fowlId) REFERENCES fowls(id) ON DELETE CASCADE
+);
+```
+
+#### 11. Bloodline Table
+```sql
+CREATE TABLE bloodlines (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    originFowlId TEXT NOT NULL,
+    founderGeneration INTEGER NOT NULL DEFAULT 1,
+    characteristics TEXT NOT NULL DEFAULT '[]',
+    totalGenerations INTEGER NOT NULL DEFAULT 1,
+    activeBreeders INTEGER NOT NULL DEFAULT 0,
+    totalOffspring INTEGER NOT NULL DEFAULT 0,
+    performanceMetrics TEXT,
+    geneticDiversity REAL NOT NULL DEFAULT 1.0,
+    breedingGoals TEXT NOT NULL DEFAULT '[]',
+    certificationLevel TEXT NOT NULL DEFAULT 'UNVERIFIED',
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+
+    FOREIGN KEY(originFowlId) REFERENCES fowls(id)
+);
+```
+
+#### 12. Farm Access Table
 ```sql
 CREATE TABLE farm_access (
     id TEXT PRIMARY KEY NOT NULL,
@@ -332,7 +386,14 @@ CREATE INDEX idx_farm_invitations_farm ON farm_invitations(farmId);
 CREATE INDEX idx_fowl_lifecycle_fowl ON fowl_lifecycle(fowlId);
 CREATE INDEX idx_fowl_lifecycle_farm ON fowl_lifecycle(farmId);
 CREATE INDEX idx_fowl_lineage_fowl ON fowl_lineage(fowlId);
-CREATE INDEX idx_fowl_lineage_parents ON fowl_lineage(motherId, fatherId);
+CREATE INDEX idx_fowl_lineage_parents ON fowl_lineage(parentMaleId, parentFemaleId);
+
+-- Vaccination and bloodline indexes
+CREATE INDEX idx_vaccination_flock ON vaccination_records(flockId);
+CREATE INDEX idx_vaccination_fowl ON vaccination_records(fowlId);
+CREATE INDEX idx_vaccination_due_date ON vaccination_records(nextDueDate);
+CREATE INDEX idx_bloodlines_origin ON bloodlines(originFowlId);
+CREATE INDEX idx_bloodlines_generation ON bloodlines(totalGenerations);
 
 -- Audit and analytics indexes
 CREATE INDEX idx_access_audit_farm ON access_audit_log(farmId);
@@ -590,6 +651,9 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_farm_invitations_email ON farm_invitations(inviteeEmail)")
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lifecycle_fowl ON fowl_lifecycle(fowlId)")
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_fowl_lineage_fowl ON fowl_lineage(fowlId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_vaccination_flock ON vaccination_records(flockId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_vaccination_fowl ON vaccination_records(fowlId)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_bloodlines_origin ON bloodlines(originFowlId)")
     }
 }
 ```

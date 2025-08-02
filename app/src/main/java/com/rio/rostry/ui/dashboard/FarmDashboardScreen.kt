@@ -80,7 +80,7 @@ fun FarmDashboardScreen(
             }
             uiState.error != null -> {
                 DashboardErrorState(
-                    error = uiState.error,
+                    error = uiState.error ?: "Unknown error",
                     onRetry = { viewModel.refreshData() },
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -563,9 +563,7 @@ fun FlockManagementSection(
             if (flocks.isEmpty()) {
                 EmptyStates.NoData(
                     title = "No Flocks",
-                    description = "Create your first flock to start managing your fowls",
-                    actionText = "Create Flock",
-                    onAction = onCreateFlock
+                    description = "Create your first flock to start managing your fowls"
                 )
             } else {
                 flocks.take(3).forEach { flock ->
