@@ -7,6 +7,8 @@ import com.rio.rostry.data.model.User
 import com.rio.rostry.data.model.UserRole
 import com.rio.rostry.data.repository.AuthRepository
 import com.rio.rostry.data.repository.FowlRepository
+import com.rio.rostry.data.repository.PostRepository
+import com.rio.rostry.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +32,9 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val fowlRepository: FowlRepository
+    private val fowlRepository: FowlRepository,
+    private val postRepository: PostRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -47,6 +51,14 @@ class ProfileViewModel @Inject constructor(
                     val fowls = fowlRepository.getUserFowls(currentUser.id)
                     val fowlCount = fowls.size
                     
+                    // Load post count
+                    val userPosts = postRepository.getUserPosts(currentUser.id)
+                    val postCount = userPosts.size
+                    
+                    // Load following count (for now, use a placeholder)
+                    // In a real implementation, you would have a following/followers system
+                    val followingCount = currentUser.followingIds?.size ?: 0
+                    
                     // Format member since date
                     val memberSince = SimpleDateFormat("MMM yyyy", Locale.getDefault())
                         .format(Date(currentUser.createdAt))
@@ -55,8 +67,8 @@ class ProfileViewModel @Inject constructor(
                         isLoading = false,
                         user = currentUser,
                         fowlCount = fowlCount,
-                        postCount = 0, // TODO: Implement post counting
-                        followingCount = 0, // TODO: Implement following counting
+                        postCount = postCount,
+                        followingCount = followingCount,
                         memberSince = memberSince
                     )
                 } else {

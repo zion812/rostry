@@ -1,13 +1,102 @@
 # ROSTRY Database Schema Documentation
 
-> **Version**: 7.0
+> **Version**: 12.0
 > **Last Updated**: 2025-01-08
-> **Database Type**: Hybrid (Room + Firestore)
-> **Status**: Current Implementation with Farm Management System
+> **Database Type**: Hybrid (Room v12 + Firestore)
+> **Status**: ✅ **PRODUCTION READY**
+> **Entities**: 28 comprehensive data models
+> **Features**: Enhanced lineage tracking, simplified permissions, comprehensive farm management
 
 ## 📋 Overview
 
-ROSTRY uses a hybrid database architecture combining Room (local SQLite) for offline capabilities and Firebase Firestore (cloud NoSQL) for real-time synchronization and backup. The system now includes comprehensive farm management, access control, and collaboration features.
+ROSTRY uses a hybrid database architecture combining Room v12 (local SQLite) for offline capabilities and Firebase Firestore (cloud NoSQL) for real-time synchronization and backup. The system includes comprehensive farm management, access control, collaboration features, and **enhanced lineage tracking with traceable/non-traceable modes**.
+
+## 🆕 Recent Database Enhancements
+
+### Enhanced Lineage Tracking Schema ✅ **NEW**
+- **MarketplaceListing**: Enhanced with 6 lineage tracking fields
+- **Fowl Entity**: Enhanced with 4 lineage tracking fields
+- **Conditional Data**: Strict null handling for non-traceable mode
+- **Validation**: Parent ownership and existence verification
+
+### Database Performance ✅ **OPTIMIZED**
+- **Room v12**: Latest version with performance improvements
+- **25+ DAOs**: Optimized data access objects
+- **Indexing**: Strategic indexes for faster queries
+- **Caching**: Intelligent caching for offline support
+
+## 🧬 **Lineage Tracking System** ✅ **IMPLEMENTED**
+
+### Enhanced Data Models for Lineage Tracking
+
+The database has been enhanced with comprehensive lineage tracking capabilities, allowing users to trace fowl ancestry and breeding history with detailed genetic information.
+
+#### **MarketplaceListing Entity** (Enhanced with Lineage Fields)
+```kotlin
+@Entity(tableName = "marketplace_listings")
+data class MarketplaceListing(
+    @PrimaryKey val listingId: String = "",
+    val fowlId: String = "",
+    val sellerId: String = "",
+    val sellerName: String = "",
+    val price: Double = 0.0,
+    val purpose: String = "",
+    val description: String = "",
+    val location: String = "",
+
+    // Auto-populated fowl information
+    val fowlName: String = "",
+    val fowlBreed: String = "",
+    val fowlType: String = "",
+    val fowlGender: String = "",
+    val fowlAge: String = "",
+    val motherId: String? = null,
+    val fatherId: String? = null,
+
+    // ✅ Enhanced lineage tracking fields
+    val hasTraceableLineage: Boolean = false,
+    val lineageVerified: Boolean = false,
+    val generation: Int? = null,
+    val bloodlineId: String? = null,
+    val inbreedingCoefficient: Double? = null,
+    val lineageNotes: String = "",
+
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+#### **Fowl Entity** (Enhanced with Lineage Fields)
+```kotlin
+@Entity(tableName = "fowls")
+data class Fowl(
+    @PrimaryKey val id: String = "",
+    val ownerId: String = "",
+    val name: String = "",
+    val breed: String = "",
+    val type: FowlType = FowlType.CHICKEN,
+    val gender: FowlGender = FowlGender.UNKNOWN,
+    val motherId: String? = null,
+    val fatherId: String? = null,
+    val status: String = "Growing",
+
+    // ✅ Enhanced lineage tracking
+    val hasTraceableLineage: Boolean = false,
+    val lineageVerified: Boolean = false,
+    val generation: Int? = null,
+    val bloodlineId: String? = null,
+
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+```
+
+### Lineage Tracking Benefits
+- ✅ **Genetic Traceability**: Complete parent-offspring relationships
+- ✅ **Breeding Programs**: Support for serious breeding operations
+- ✅ **Premium Pricing**: Enable higher prices for traceable lineage fowls
+- ✅ **Buyer Confidence**: Detailed genetic information for informed decisions
+- ✅ **Data Integrity**: Comprehensive validation and verification system
 
 ## 🏗️ Database Architecture
 
@@ -58,9 +147,9 @@ UI Updates ← Flow/LiveData ← Local DB ← Sync ← Cloud DB
         PermissionRequest::class,
         InvitationAnalytics::class,
 
-        // Marketplace & Commerce
+        // Marketplace & Commerce (Enhanced with Lineage Tracking)
         CartItem::class,
-        MarketplaceListing::class,
+        MarketplaceListing::class,  // Enhanced with lineage tracking fields
         Order::class,
         TransferLog::class,
 

@@ -1,7 +1,9 @@
 package com.rio.rostry.ui.fowls
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.storage.FirebaseStorage
 import com.rio.rostry.data.model.Fowl
 import com.rio.rostry.data.model.FowlGender
 import com.rio.rostry.data.model.FowlType
@@ -12,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -63,6 +67,41 @@ class AddFowlViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isForSale = isForSale)
     }
     
+    fun addImage(imageUri: Uri) {
+        val currentImages = _uiState.value.selectedImages.toMutableList()
+        if (currentImages.size < 5) { // Limit to 5 images
+            currentImages.add(imageUri)
+            _uiState.value = _uiState.value.copy(selectedImages = currentImages)
+        }
+    }
+    
+    fun removeImage(imageUri: Uri) {
+        val currentImages = _uiState.value.selectedImages.toMutableList()
+        currentImages.remove(imageUri)
+        _uiState.value = _uiState.value.copy(selectedImages = currentImages)
+    }
+    
+    private suspend fun uploadImages(images: List<Uri>): List<String> {
+        val storage = FirebaseStorage.getInstance()
+        val uploadedUrls = mutableListOf<String>()
+        
+        for (imageUri in images) {
+            try {
+                val fileName = "fowl_images/${UUID.randomUUID()}.jpg"
+                val storageRef = storage.reference.child(fileName)
+                
+                val uploadTask = storageRef.putFile(imageUri).await()
+                val downloadUrl = uploadTask.storage.downloadUrl.await()
+                uploadedUrls.add(downloadUrl.toString())
+            } catch (e: Exception) {
+                // Log error but continue with other images
+                continue
+            }
+        }
+        
+        return uploadedUrls
+    }
+    
     fun addFowl(onSuccess: () -> Unit) {
         val currentUser = authRepository.currentUser
         if (currentUser == null) {
@@ -86,32 +125,46 @@ class AddFowlViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true, error = null)
             
-            val fowl = Fowl(
-                ownerId = currentUser.uid,
-                name = state.name.trim(),
-                breed = state.breed.trim(),
-                type = state.type,
-                gender = state.gender,
-                weight = state.weight.toDoubleOrNull() ?: 0.0,
-                color = state.color.trim(),
-                description = state.description.trim(),
-                location = state.location.trim(),
-                isForSale = state.isForSale,
-                price = if (state.isForSale) state.price.toDoubleOrNull() ?: 0.0 else 0.0,
-                imageUrls = emptyList() // TODO: Add image upload functionality
-            )
-            
-            fowlRepository.addFowl(fowl)
-                .onSuccess {
-                    _uiState.value = state.copy(isLoading = false)
-                    onSuccess()
+            try {
+                // Upload images first if any are selected
+                val imageUrls = if (state.selectedImages.isNotEmpty()) {
+                    uploadImages(state.selectedImages)
+                } else {
+                    emptyList()
                 }
-                .onFailure { error ->
-                    _uiState.value = state.copy(
-                        isLoading = false,
-                        error = error.message ?: "Failed to add fowl"
-                    )
-                }
+                
+                val fowl = Fowl(
+                    ownerId = currentUser.uid,
+                    name = state.name.trim(),
+                    breed = state.breed.trim(),
+                    type = state.type,
+                    gender = state.gender,
+                    weight = state.weight.toDoubleOrNull() ?: 0.0,
+                    color = state.color.trim(),
+                    description = state.description.trim(),
+                    location = state.location.trim(),
+                    isForSale = state.isForSale,
+                    price = if (state.isForSale) state.price.toDoubleOrNull() ?: 0.0 else 0.0,
+                    imageUrls = imageUrls
+                )
+                
+                fowlRepository.addFowl(fowl)
+                    .onSuccess {
+                        _uiState.value = state.copy(isLoading = false)
+                        onSuccess()
+                    }
+                    .onFailure { error ->
+                        _uiState.value = state.copy(
+                            isLoading = false,
+                            error = error.message ?: "Failed to add fowl"
+                        )
+                    }
+            } catch (e: Exception) {
+                _uiState.value = state.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to upload images"
+                )
+            }
         }
     }
     
@@ -132,5 +185,6 @@ data class AddFowlUiState(
     val location: String = "",
     val isForSale: Boolean = false,
     val price: String = "",
+    val selectedImages: List<Uri> = emptyList(),
     val error: String? = null
 )

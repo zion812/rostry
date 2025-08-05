@@ -1,0 +1,425 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    /**
+     * Check if user is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    /**
+     * Get user role from users collection
+     */
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.roleId;
+    }
+    
+    /**
+     * Check if user has specific role
+     */
+    function hasRole(userId, roleId) {
+      return getUserRole(userId) == roleId;
+    }
+    
+    /**
+     * Check if user has any of the specified roles
+     */
+    function hasAnyRole(userId, roles) {
+      return getUserRole(userId) in roles;
+    }
+    
+    /**
+     * Role hierarchy levels for permission checking
+     */
+    function getRoleLevel(roleId) {
+      return roleId == 'consumer' ? 1 :
+             roleId == 'basic_farmer' ? 2 :
+             roleId == 'verified_farmer' ? 3 :
+             roleId == 'premium_breeder' ? 4 :
+             roleId == 'farm_manager' ? 5 :
+             roleId == 'moderator' ? 6 :
+             roleId == 'super_admin' ? 7 : 0;
+    }
+    
+    /**
+     * Check if user has minimum role level
+     */
+    function hasMinimumRole(userId, minimumLevel) {
+      return getRoleLevel(getUserRole(userId)) >= minimumLevel;
+    }
+    
+    /**
+     * Check if user has farm access
+     */
+    function hasFarmAccess(userId, farmId) {
+      return exists(/databases/$(database)/documents/farm_access/$(farmId + '_' + userId));
+    }
+    
+    /**
+     * Check if user has organization access
+     */
+    function hasOrganizationAccess(userId, orgId) {
+      return exists(/databases/$(database)/documents/organization_memberships/$(orgId + '_' + userId));
+    }
+    
+    /**
+     * Check if user is farm owner
+     */
+    function isFarmOwner(userId, farmId) {
+      return get(/databases/$(database)/documents/farms/$(farmId)).data.ownerId == userId;
+    }
+    
+    /**
+     * Check if user owns the resource
+     */
+    function isOwner(userId, ownerId) {
+      return userId == ownerId;
+    }
+    
+    /**
+     * Check if user has marketplace permissions
+     */
+    function hasMarketplaceAccess(userId) {
+      return hasMinimumRole(userId, 1); // All authenticated users
+    }
+    
+    /**
+     * Check if user can list items in marketplace
+     */
+    function canListInMarketplace(userId) {
+      return hasMinimumRole(userId, 2); // Basic farmer and above
+    }
+    
+    /**
+     * Check if user has farm management permissions
+     */
+    function hasFarmManagementAccess(userId) {
+      return hasMinimumRole(userId, 2); // Basic farmer and above
+    }
+    
+    /**
+     * Check if user has analytics access
+     */
+    function hasAnalyticsAccess(userId) {
+      return hasMinimumRole(userId, 3); // Verified farmer and above
+    }
+    
+    /**
+     * Check if user has team management permissions
+     */
+    function hasTeamManagementAccess(userId) {
+      return hasMinimumRole(userId, 5); // Farm manager and above
+    }
+    
+    /**
+     * Check if user has moderation permissions
+     */
+    function hasModerationAccess(userId) {
+      return hasMinimumRole(userId, 6); // Moderator and above
+    }
+    
+    /**
+     * Check if user has admin permissions
+     */
+    function hasAdminAccess(userId) {
+      return hasMinimumRole(userId, 7); // Super admin only
+    }
+    
+    // ========================================
+    // USER COLLECTION RULES
+    // ========================================
+    
+    match /users/{userId} {
+      // Users can read and write their own data
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Moderators and admins can read all user data
+      allow read: if isAuthenticated() && hasModerationAccess(request.auth.uid);
+      
+      // Admins can write all user data
+      allow write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+      
+      // Validate user data on write
+      allow write: if isAuthenticated() && 
+                      request.auth.uid == userId &&
+                      validateUserData(request.resource.data);
+    }
+    
+    /**
+     * Validate user data structure and constraints
+     */
+    function validateUserData(data) {
+      return data.keys().hasAll(['id', 'email', 'displayName', 'roleId']) &&
+             data.id is string &&
+             data.email is string &&
+             data.displayName is string &&
+             data.roleId in ['consumer', 'basic_farmer', 'verified_farmer', 
+                           'premium_breeder', 'farm_manager', 'moderator', 'super_admin'];
+    }
+    
+    // ========================================
+    // FARM COLLECTION RULES
+    // ========================================
+    
+    match /farms/{farmId} {
+      // Farm owners can read and write their farms
+      allow read, write: if isAuthenticated() && 
+                            isFarmOwner(request.auth.uid, farmId);
+      
+      // Users with farm access can read
+      allow read: if isAuthenticated() && 
+                     hasFarmAccess(request.auth.uid, farmId);
+      
+      // Farm managers can write if they have access
+      allow write: if isAuthenticated() && 
+                      hasFarmAccess(request.auth.uid, farmId) &&
+                      hasTeamManagementAccess(request.auth.uid);
+      
+      // Admins can read and write all farms
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+      
+      // Validate farm data on write
+      allow write: if validateFarmData(request.resource.data);
+    }
+    
+    function validateFarmData(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerId', 'type']) &&
+             data.id is string &&
+             data.name is string &&
+             data.ownerId is string &&
+             data.type in ['individual_farm', 'cooperative', 'commercial_farm', 
+                          'breeding_facility', 'research_institution', 'marketplace_vendor', 'educational'];
+    }
+    
+    // ========================================
+    // FOWL COLLECTION RULES
+    // ========================================
+    
+    match /fowls/{fowlId} {
+      // Anyone can read fowls for marketplace
+      allow read: if isAuthenticated() && hasMarketplaceAccess(request.auth.uid);
+      
+      // Fowl owners can write their fowls
+      allow write: if isAuthenticated() && 
+                      isOwner(request.auth.uid, resource.data.ownerId);
+      
+      // Users with farm access can read farm fowls
+      allow read: if isAuthenticated() && 
+                     hasFarmAccess(request.auth.uid, resource.data.farmId);
+      
+      // Farm managers can write farm fowls
+      allow write: if isAuthenticated() && 
+                      hasFarmAccess(request.auth.uid, resource.data.farmId) &&
+                      hasTeamManagementAccess(request.auth.uid);
+      
+      // Validate fowl data on write
+      allow write: if validateFowlData(request.resource.data);
+    }
+    
+    function validateFowlData(data) {
+      return data.keys().hasAll(['id', 'name', 'ownerId', 'farmId', 'breed']) &&
+             data.id is string &&
+             data.name is string &&
+             data.ownerId is string &&
+             data.farmId is string &&
+             data.breed is string;
+    }
+    
+    // ========================================
+    // FARM ACCESS COLLECTION RULES
+    // ========================================
+    
+    match /farm_access/{accessId} {
+      // Farm owners can manage access
+      allow read, write: if isAuthenticated() && 
+                            isFarmOwner(request.auth.uid, resource.data.farmId);
+      
+      // Users can read their own access
+      allow read: if isAuthenticated() && 
+                     request.auth.uid == resource.data.userId;
+      
+      // Farm managers can manage access
+      allow read, write: if isAuthenticated() && 
+                            hasFarmAccess(request.auth.uid, resource.data.farmId) &&
+                            hasTeamManagementAccess(request.auth.uid);
+      
+      // Admins can manage all access
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // ORGANIZATION COLLECTION RULES
+    // ========================================
+    
+    match /organizations/{orgId} {
+      // Organization owners can read and write
+      allow read, write: if isAuthenticated() && 
+                            isOwner(request.auth.uid, resource.data.ownerId);
+      
+      // Organization members can read
+      allow read: if isAuthenticated() && 
+                     hasOrganizationAccess(request.auth.uid, orgId);
+      
+      // Organization admins can write
+      allow write: if isAuthenticated() && 
+                      hasOrganizationAccess(request.auth.uid, orgId) &&
+                      hasTeamManagementAccess(request.auth.uid);
+      
+      // Admins can read and write all organizations
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // MARKETPLACE COLLECTION RULES
+    // ========================================
+    
+    match /marketplace_listings/{listingId} {
+      // Anyone can read marketplace listings
+      allow read: if isAuthenticated() && hasMarketplaceAccess(request.auth.uid);
+      
+      // Listing owners can write their listings
+      allow write: if isAuthenticated() && 
+                      isOwner(request.auth.uid, resource.data.sellerId);
+      
+      // Users with listing permissions can create listings
+      allow create: if isAuthenticated() && 
+                       canListInMarketplace(request.auth.uid) &&
+                       request.auth.uid == request.resource.data.sellerId;
+      
+      // Moderators can moderate listings
+      allow write: if isAuthenticated() && hasModerationAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // ORDER COLLECTION RULES
+    // ========================================
+    
+    match /orders/{orderId} {
+      // Order participants can read orders
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == resource.data.buyerId || 
+                      request.auth.uid == resource.data.sellerId);
+      
+      // Buyers can create orders
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == request.resource.data.buyerId;
+      
+      // Sellers can update order status
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.sellerId;
+      
+      // Admins can read and write all orders
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // CHAT COLLECTION RULES
+    // ========================================
+    
+    match /chats/{chatId} {
+      // Chat participants can read and write
+      allow read, write: if isAuthenticated() && 
+                            request.auth.uid in resource.data.participantIds;
+      
+      // Moderators can read all chats
+      allow read: if isAuthenticated() && hasModerationAccess(request.auth.uid);
+      
+      // Admins can read and write all chats
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+    }
+    
+    match /chats/{chatId}/messages/{messageId} {
+      // Chat participants can read messages
+      allow read: if isAuthenticated() && 
+                     request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+      
+      // Message senders can write their messages
+      allow write: if isAuthenticated() && 
+                      request.auth.uid == request.resource.data.senderId;
+      
+      // Moderators can moderate messages
+      allow write: if isAuthenticated() && hasModerationAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // POST COLLECTION RULES
+    // ========================================
+    
+    match /posts/{postId} {
+      // Anyone can read posts
+      allow read: if isAuthenticated();
+      
+      // Post authors can write their posts
+      allow write: if isAuthenticated() && 
+                      isOwner(request.auth.uid, resource.data.authorId);
+      
+      // Users can create posts
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == request.resource.data.authorId;
+      
+      // Moderators can moderate posts
+      allow write: if isAuthenticated() && hasModerationAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // ANALYTICS COLLECTION RULES
+    // ========================================
+    
+    match /analytics/{analyticsId} {
+      // Users can read their own analytics
+      allow read: if isAuthenticated() && 
+                     isOwner(request.auth.uid, resource.data.userId);
+      
+      // Users with analytics access can read farm analytics
+      allow read: if isAuthenticated() && 
+                     hasAnalyticsAccess(request.auth.uid) &&
+                     hasFarmAccess(request.auth.uid, resource.data.farmId);
+      
+      // System can write analytics data
+      allow write: if isAuthenticated() && 
+                      (isOwner(request.auth.uid, resource.data.userId) ||
+                       hasAdminAccess(request.auth.uid));
+    }
+    
+    // ========================================
+    // ADMIN COLLECTION RULES
+    // ========================================
+    
+    match /admin/{document=**} {
+      // Only admins can access admin collections
+      allow read, write: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+    }
+    
+    // ========================================
+    // AUDIT LOG COLLECTION RULES
+    // ========================================
+    
+    match /audit_logs/{logId} {
+      // System can write audit logs
+      allow write: if isAuthenticated();
+      
+      // Admins can read audit logs
+      allow read: if isAuthenticated() && hasAdminAccess(request.auth.uid);
+      
+      // Users can read their own audit logs
+      allow read: if isAuthenticated() && 
+                     isOwner(request.auth.uid, resource.data.userId);
+    }
+    
+    // ========================================
+    // DEFAULT DENY RULE
+    // ========================================
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

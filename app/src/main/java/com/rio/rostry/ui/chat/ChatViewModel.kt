@@ -7,6 +7,7 @@ import com.rio.rostry.data.model.Message
 import com.rio.rostry.data.model.MessageType
 import com.rio.rostry.data.repository.AuthRepository
 import com.rio.rostry.data.repository.ChatRepository
+import com.rio.rostry.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +27,8 @@ data class ChatUiState(
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -76,11 +78,15 @@ class ChatViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
+                // Get current user's display name
+                val currentUser = authRepository.getCurrentUser()
+                val senderName = currentUser?.displayName ?: "Unknown User"
+                
                 val message = Message(
                     id = UUID.randomUUID().toString(),
                     chatId = chat.id,
                     senderId = currentUserId,
-                    senderName = "", // TODO: Get actual sender name
+                    senderName = senderName,
                     content = content,
                     type = MessageType.TEXT,
                     timestamp = System.currentTimeMillis(),

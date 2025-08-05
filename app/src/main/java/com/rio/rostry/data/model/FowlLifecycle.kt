@@ -9,32 +9,47 @@ import java.util.UUID
  * Comprehensive fowl lifecycle tracking entity
  * Tracks complete lifecycle from egg to adult breeder stage
  */
-@Entity(tableName = "fowl_lifecycle")
+@Entity(tableName = "fowl_lifecycles")
 data class FowlLifecycle(
     @PrimaryKey
     @DocumentId
     val id: String = UUID.randomUUID().toString(),
     val fowlId: String,
-    val currentStage: LifecycleStage = LifecycleStage.EGG,
+    val farmId: String? = null,
+    val currentStage: String = "EGG", // Store as string for Room compatibility
     val stageStartDate: Long = System.currentTimeMillis(),
-    val expectedNextStageDate: Long = 0,
-    val batchId: String? = null,
-    val parentMaleId: String? = null,
-    val parentFemaleId: String? = null,
-    val hatchingDetails: HatchingDetails? = null,
-    val growthMetrics: List<GrowthMetric> = emptyList(),
-    val milestones: List<LifecycleMilestone> = emptyList(),
-    val isBreederCandidate: Boolean = false,
-    val breederCertificationUrl: String? = null,
+    val expectedTransitionDate: Long? = null,
+    val actualTransitionDate: Long? = null,
+    val stageProgress: Double = 0.0,
+    val milestones: String = "[]", // Store as JSON string
+    val growthRecords: String = "[]", // Add missing growthRecords as JSON string
+    val healthMetrics: String? = null, // Store as JSON string
+    val growthMetrics: String? = null, // Store as JSON string
+    val environmentalFactors: String? = null, // Store as JSON string
+    val careInstructions: String = "[]", // Store as JSON string
+    val notes: String = "",
+    val isActive: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     /**
+     * Get current stage as enum
+     */
+    fun getCurrentStageEnum(): LifecycleStage {
+        return try {
+            LifecycleStage.valueOf(currentStage)
+        } catch (e: Exception) {
+            LifecycleStage.EGG
+        }
+    }
+
+    /**
      * Calculate progress percentage for current stage
      */
-    fun getStageProgress(): Float {
+    fun getStageProgressCalculated(): Float {
         val currentTime = System.currentTimeMillis()
-        val stageDuration = currentStage.durationWeeks * 7 * 24 * 60 * 60 * 1000L // Convert to milliseconds
+        val stage = getCurrentStageEnum()
+        val stageDuration = stage.durationWeeks * 7 * 24 * 60 * 60 * 1000L // Convert to milliseconds
         
         return if (stageDuration > 0) {
             val elapsed = currentTime - stageStartDate
@@ -49,7 +64,8 @@ data class FowlLifecycle(
      */
     fun getNextStage(): LifecycleStage? {
         val stages = LifecycleStage.values()
-        val currentIndex = stages.indexOf(currentStage)
+        val currentStageEnum = getCurrentStageEnum()
+        val currentIndex = stages.indexOf(currentStageEnum)
         return if (currentIndex < stages.size - 1) stages[currentIndex + 1] else null
     }
 
@@ -57,7 +73,7 @@ data class FowlLifecycle(
      * Check if fowl is ready for next stage transition
      */
     fun isReadyForNextStage(): Boolean {
-        return getStageProgress() >= 0.9f && getNextStage() != null
+        return getStageProgressCalculated() >= 0.9f && getNextStage() != null
     }
 }
 
@@ -168,88 +184,4 @@ enum class HatchingQuality(val displayName: String, val description: String) {
     AVERAGE("Average", "70-79% hatch rate"),
     POOR("Poor", "60-69% hatch rate"),
     FAILED("Failed", "Below 60% hatch rate")
-}
-
-/**
- * Individual growth measurement record
- */
-data class GrowthMetric(
-    val id: String = UUID.randomUUID().toString(),
-    val date: Long = System.currentTimeMillis(),
-    val weight: Double = 0.0,
-    val height: Double = 0.0,
-    val wingspan: Double = 0.0,
-    val bodyConditionScore: Int = 5, // 1-10 scale
-    val notes: String = "",
-    val proofImageUrl: String = "",
-    val recordedBy: String = "",
-    val measurementMethod: MeasurementMethod = MeasurementMethod.MANUAL,
-    val environmentalConditions: EnvironmentalConditions? = null
-) {
-    /**
-     * Calculate growth rate compared to previous measurement
-     */
-    fun calculateGrowthRate(previousMetric: GrowthMetric?): Double {
-        return previousMetric?.let { prev ->
-            val daysDiff = (date - prev.date) / (24 * 60 * 60 * 1000)
-            if (daysDiff > 0) {
-                ((weight - prev.weight) / daysDiff) * 7 // Weekly growth rate
-            } else {
-                0.0
-            }
-        } ?: 0.0
-    }
-
-    /**
-     * Assess if growth is within normal range
-     */
-    fun isGrowthNormal(expectedWeight: Double, tolerance: Double = 0.15): Boolean {
-        val deviation = kotlin.math.abs(weight - expectedWeight) / expectedWeight
-        return deviation <= tolerance
-    }
-}
-
-enum class MeasurementMethod(val displayName: String) {
-    MANUAL("Manual Measurement"),
-    DIGITAL_SCALE("Digital Scale"),
-    AUTOMATED("Automated System"),
-    ESTIMATED("Visual Estimation")
-}
-
-data class EnvironmentalConditions(
-    val temperature: Double = 0.0,
-    val humidity: Double = 0.0,
-    val lightHours: Double = 0.0,
-    val feedType: String = "",
-    val weatherConditions: String = ""
-)
-
-/**
- * Lifecycle milestone achievement record
- */
-data class LifecycleMilestone(
-    val id: String = UUID.randomUUID().toString(),
-    val stage: LifecycleStage,
-    val achievedDate: Long,
-    val description: String,
-    val proofImageUrls: List<String> = emptyList(),
-    val verificationStatus: VerificationStatus = VerificationStatus.PENDING,
-    val verifiedBy: String = "",
-    val verificationDate: Long = 0,
-    val notes: String = "",
-    val isSignificant: Boolean = false // Major milestones like first egg, first breeding
-) {
-    /**
-     * Check if milestone is overdue based on expected timing
-     */
-    fun isOverdue(expectedDate: Long): Boolean {
-        return System.currentTimeMillis() > expectedDate && verificationStatus == VerificationStatus.PENDING
-    }
-
-    /**
-     * Get days since achievement
-     */
-    fun getDaysSinceAchievement(): Long {
-        return (System.currentTimeMillis() - achievedDate) / (24 * 60 * 60 * 1000)
-    }
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rio.rostry.data.model.Fowl
 import com.rio.rostry.data.model.FowlRecord
+import com.rio.rostry.data.repository.AuthRepository
 import com.rio.rostry.data.repository.FowlRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FowlDetailViewModel @Inject constructor(
-    private val fowlRepository: FowlRepository
+    private val fowlRepository: FowlRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FowlDetailUiState())
@@ -36,7 +38,7 @@ class FowlDetailViewModel @Inject constructor(
                         fowl = fowl,
                         records = records,
                         error = if (fowl == null) "Fowl not found" else null,
-                        isOwner = fowl?.ownerId == getCurrentUserId() // TODO: Get current user ID
+                        isOwner = fowl?.ownerId == getCurrentUserId()
                     )
                 }.collect { }
             } catch (e: Exception) {
@@ -142,9 +144,8 @@ class FowlDetailViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    private fun getCurrentUserId(): String {
-        // TODO: Get current user ID from auth repository
-        return "current_user_id"
+    private fun getCurrentUserId(): String? {
+        return authRepository.currentUser?.uid
     }
 }
 

@@ -23,8 +23,22 @@ object DatabaseModule {
             RostryDatabase::class.java,
             "rostry_database"
         )
-        .addMigrations(RostryDatabase.MIGRATION_1_2, RostryDatabase.MIGRATION_2_3, RostryDatabase.MIGRATION_3_4, RostryDatabase.MIGRATION_4_5, RostryDatabase.MIGRATION_5_6, RostryDatabase.MIGRATION_6_7)
-        .fallbackToDestructiveMigration() // Allow destructive migration for development
+        .addMigrations(
+            RostryDatabase.MIGRATION_1_2,
+            RostryDatabase.MIGRATION_2_3,
+            RostryDatabase.MIGRATION_3_4,
+            RostryDatabase.MIGRATION_4_5,
+            RostryDatabase.MIGRATION_5_6,
+            RostryDatabase.MIGRATION_6_7,
+            RostryDatabase.MIGRATION_7_8,
+            RostryDatabase.MIGRATION_8_9,
+            RostryDatabase.MIGRATION_9_10,
+            RostryDatabase.MIGRATION_10_11,
+            RostryDatabase.MIGRATION_11_12
+        )
+        .setQueryCallback(DatabaseQueryCallback(), CoroutineScope(Dispatchers.IO).asExecutor())
+        .enableMultiInstanceInvalidation()
+        .fallbackToDestructiveMigration() // Remove in production
         .build()
     }
     

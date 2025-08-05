@@ -29,6 +29,11 @@ data class Fowl(
     val isForSale: Boolean = false,
     val price: Double = 0.0,
     val location: String = "",
+    // Enhanced lineage tracking
+    val hasTraceableLineage: Boolean = false,
+    val lineageVerified: Boolean = false,
+    val generation: Int? = null,
+    val bloodlineId: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

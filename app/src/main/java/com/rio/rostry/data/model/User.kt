@@ -26,6 +26,8 @@ data class User(
     val sellerRating: Double = 0.0,
     val totalSales: Int = 0,
     val joinedDate: Long = System.currentTimeMillis(),
+    val followingIds: List<String> = emptyList(), // Add missing followingIds
+    val followerIds: List<String> = emptyList(), // Add missing followerIds
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val isOnline: Boolean = false,

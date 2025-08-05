@@ -97,10 +97,10 @@ fun CreatePostScreen(
                         }
                     }
                     
-                    if (uiState.selectedImageUri.isNotEmpty()) {
+                    uiState.selectedImageUri?.let { uri ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Image selected: ${uiState.selectedImageUri}",
+                            text = "Image selected: ${uri.lastPathSegment ?: "Unknown"}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )

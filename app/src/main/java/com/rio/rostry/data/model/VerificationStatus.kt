@@ -12,13 +12,3 @@ enum class VerificationStatus(val displayName: String, val description: String) 
     SUSPENDED("Suspended", "Verification temporarily suspended")
 }
 
-/**
- * Performance rating enum for various metrics
- */
-enum class PerformanceRating(val displayName: String, val color: String, val score: Int) {
-    OUTSTANDING("Outstanding", "#4CAF50", 5),
-    EXCELLENT("Excellent", "#8BC34A", 4),
-    GOOD("Good", "#CDDC39", 3),
-    AVERAGE("Average", "#FFC107", 2),
-    BELOW_AVERAGE("Below Average", "#FF5722", 1)
-}

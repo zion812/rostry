@@ -5,11 +5,11 @@ import com.google.firebase.storage.FirebaseStorage
 import com.rio.rostry.data.local.dao.FarmDao
 import com.rio.rostry.data.local.dao.FlockDao
 import com.rio.rostry.data.model.*
+// Use specific import to avoid conflicts
+import com.rio.rostry.data.model.AlertSeverity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -330,73 +330,170 @@ class FarmRepository @Inject constructor(
     /**
      * Get health alerts
      */
-    fun getHealthAlerts(): Flow<List<String>> {
-        return getAllFlocks().map { flocks ->
-            val alerts = mutableListOf<String>()
-            
+    fun getHealthAlerts(): Flow<List<HealthAlert>> {
+        return combine(
+            getAllFlocks(),
+            getCurrentFarm()
+        ) { flocks, farm ->
+            val alerts = mutableListOf<HealthAlert>()
+
+            // Check for unhealthy flocks
             flocks.forEach { flock ->
-                // Health status alerts
                 when (flock.healthStatus) {
-                    FlockHealthStatus.TREATMENT -> alerts.add("${flock.flockName} under treatment")
-                    FlockHealthStatus.QUARANTINE -> alerts.add("${flock.flockName} quarantined")
-                    FlockHealthStatus.MONITORING -> alerts.add("${flock.flockName} needs monitoring")
-                    else -> {}
+                    FlockHealthStatus.TREATMENT -> { // Changed from SICK
+                        alerts.add(
+                            HealthAlert(
+                                id = "sick_${flock.id}",
+                                title = "Sick Flock Alert",
+                                description = "${flock.flockName} is showing signs of illness",
+                                severity = AlertSeverity.HIGH,
+                                flockId = flock.id,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
+                    FlockHealthStatus.QUARANTINE -> { // Changed from QUARANTINED
+                        alerts.add(
+                            HealthAlert(
+                                id = "quarantine_${flock.id}",
+                                title = "Quarantined Flock",
+                                description = "${flock.flockName} is currently quarantined",
+                                severity = AlertSeverity.MEDIUM,
+                                flockId = flock.id,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
+                    FlockHealthStatus.MONITORING -> { // Changed from RECOVERING
+                        alerts.add(
+                            HealthAlert(
+                                id = "recovering_${flock.id}",
+                                title = "Flock Recovering",
+                                description = "${flock.flockName} is recovering - monitor closely",
+                                severity = AlertSeverity.LOW,
+                                flockId = flock.id,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
+                    else -> { /* No alert needed */
+                    }
                 }
-                
-                // Mortality rate alerts
-                if (flock.getMortalityRate() > 5.0) {
-                    alerts.add("High mortality rate in ${flock.flockName}: ${String.format("%.1f", flock.getMortalityRate())}%")
+
+                // Check mortality rate
+                val mortalityRate = flock.getMortalityRate()
+                if (mortalityRate > 5.0) {
+                    alerts.add(
+                        HealthAlert(
+                            id = "mortality_${flock.id}",
+                            title = "High Mortality Rate",
+                            description = "${flock.flockName} has ${mortalityRate.toInt()}% mortality rate",
+                            severity = if (mortalityRate > 10.0) AlertSeverity.HIGH else AlertSeverity.MEDIUM,
+                            flockId = flock.id,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    )
                 }
-                
-                // Overdue vaccinations
-                if (flock.hasOverdueVaccinations()) {
-                    alerts.add("Overdue vaccinations for ${flock.flockName}")
-                }
-                
-                // Feed conversion ratio alerts
+
+                // Check production issues
                 flock.productionMetrics?.let { metrics ->
-                    if (metrics.feedConversionRatio > 3.0) {
-                        alerts.add("Poor feed conversion in ${flock.flockName}: ${String.format("%.2f", metrics.feedConversionRatio)}")
+                    if (metrics.eggProductionRate < 0.6) {
+                        alerts.add(
+                            HealthAlert(
+                                id = "production_${flock.id}",
+                                title = "Low Production Rate",
+                                description = "${flock.flockName} production is below 60%",
+                                severity = AlertSeverity.MEDIUM,
+                                flockId = flock.id,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
                     }
                 }
             }
-            
-            alerts
+
+            // Check facility conditions
+            farm?.facilities?.forEach { facility ->
+                if (facility.condition == FacilityCondition.POOR || facility.condition == FacilityCondition.NEEDS_REPAIR) { // Changed from CRITICAL
+                    alerts.add(
+                        HealthAlert(
+                            id = "facility_${facility.id}",
+                            title = "Facility Maintenance Required",
+                            description = "${facility.name} is in ${facility.condition.name.lowercase()} condition",
+                            severity = if (facility.condition == FacilityCondition.NEEDS_REPAIR) AlertSeverity.HIGH else AlertSeverity.MEDIUM,
+                            flockId = null,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+            }
+
+            alerts.sortedByDescending { it.severity.ordinal }
         }
     }
 
     /**
      * Get upcoming tasks
      */
-    fun getUpcomingTasks(): Flow<List<String>> {
-        return getAllFlocks().map { flocks ->
-            val tasks = mutableListOf<String>()
-            
+    fun getUpcomingTasks(): Flow<List<UpcomingTask>> {
+        return combine(
+            getAllFlocks(),
+            getCurrentFarm()
+        ) { flocks, farm ->
+            val tasks = mutableListOf<UpcomingTask>()
+            val currentTime = System.currentTimeMillis()
+            val oneDayMs = 24 * 60 * 60 * 1000L
+            7 * oneDayMs
+
+            // Vaccination tasks
             flocks.forEach { flock ->
-                // Vaccination due soon
-                flock.getNextVaccinationDue()?.let { vaccination ->
-                    if (vaccination.isDueSoon()) {
-                        tasks.add("Vaccination due for ${flock.flockName}: ${vaccination.vaccineName}")
-                    }
-                }
-                
-                // Feeding schedule review
-                flock.feedingSchedule?.let { schedule ->
-                    if (schedule.needsReview()) {
-                        tasks.add("Review feeding schedule for ${flock.flockName}")
-                    }
-                }
-                
-                // Production metrics update
-                flock.productionMetrics?.let { metrics ->
-                    val daysSinceUpdate = (System.currentTimeMillis() - metrics.lastCalculated) / (24 * 60 * 60 * 1000)
-                    if (daysSinceUpdate > 7) {
-                        tasks.add("Update production metrics for ${flock.flockName}")
+                flock.vaccinationSchedule.forEach { vaccination ->
+                    val nextDueDate = vaccination.nextDueDate
+                    if (nextDueDate != null && nextDueDate > currentTime) {
+                        val daysUntilDue = (nextDueDate - currentTime) / oneDayMs
+                        if (daysUntilDue <= 7) {
+                            tasks.add(
+                                UpcomingTask(
+                                    id = "vaccination_${flock.id}_${vaccination.id}",
+                                    title = "Vaccination Due",
+                                    description = "Administer ${vaccination.vaccineName} to ${flock.flockName}",
+                                    dueDate = nextDueDate,
+                                    priority = if (daysUntilDue <= 1) TaskPriority.HIGH else TaskPriority.MEDIUM,
+                                    taskType = TaskType.VACCINATION, // Use TaskType instead of category
+                                    flockId = flock.id,
+                                    farmId = flock.farmId, // Add missing farmId
+                                    createdAt = System.currentTimeMillis() // Add missing createdAt
+                                )
+                            )
+                        }
                     }
                 }
             }
-            
-            tasks
+
+            // Health check tasks
+            flocks.forEach { flock ->
+                val daysSinceLastUpdate = (currentTime - flock.updatedAt) / oneDayMs
+                if (daysSinceLastUpdate > 3) {
+                    tasks.add(
+                        UpcomingTask(
+                            id = "health_check_${flock.id}",
+                            title = "Health Check",
+                            description = "Perform routine health check for ${flock.flockName}",
+                            dueDate = flock.updatedAt + (3 * oneDayMs),
+                            priority = TaskPriority.LOW,
+                            taskType = TaskType.HEALTH_CHECK, // Use TaskType instead of category
+                            flockId = flock.id,
+                            farmId = flock.farmId, // Add missing farmId
+                            createdAt = System.currentTimeMillis() // Add missing createdAt
+                        )
+                    )
+                }
+            }
+
+            tasks.sortedBy { it.dueDate }
         }
     }
 
@@ -409,25 +506,28 @@ class FarmRepository @Inject constructor(
             getCurrentFarm()
         ) { flocks, farm ->
             val activities = mutableListOf<String>()
-            
+
             // Recent flock updates
             flocks.sortedByDescending { it.updatedAt }.take(5).forEach { flock ->
-                val daysSinceUpdate = (System.currentTimeMillis() - flock.updatedAt) / (24 * 60 * 60 * 1000)
+                val daysSinceUpdate =
+                    (System.currentTimeMillis() - flock.updatedAt) / (24 * 60 * 60 * 1000)
                 if (daysSinceUpdate < 7) {
                     activities.add("Updated ${flock.flockName} ${daysSinceUpdate}d ago")
                 }
             }
-            
+
             // Recent vaccinations
             flocks.forEach { flock ->
-                flock.vaccinationSchedule.sortedByDescending { it.administrationDate }.take(2).forEach { vaccination ->
-                    val daysSinceVaccination = (System.currentTimeMillis() - vaccination.administrationDate) / (24 * 60 * 60 * 1000)
-                    if (daysSinceVaccination < 7) {
-                        activities.add("Vaccinated ${flock.flockName} with ${vaccination.vaccineName} ${daysSinceVaccination}d ago")
+                flock.vaccinationSchedule.sortedByDescending { it.administrationDate }.take(2)
+                    .forEach { vaccination ->
+                        val daysSinceVaccination =
+                            (System.currentTimeMillis() - vaccination.administrationDate) / (24 * 60 * 60 * 1000)
+                        if (daysSinceVaccination < 7) {
+                            activities.add("Vaccinated ${flock.flockName} with ${vaccination.vaccineName} ${daysSinceVaccination}d ago")
+                        }
                     }
-                }
             }
-            
+
             activities.take(10)
         }
     }
@@ -464,24 +564,24 @@ class FarmRepository @Inject constructor(
         val totalFowls = flocks.sumOf { it.activeCount }
         val totalCapacity = farm?.getTotalCapacity() ?: 0
         val occupancyRate = farm?.getOccupancyRate() ?: 0.0
-        
+
         val healthyFlocks = flocks.count { it.healthStatus == FlockHealthStatus.HEALTHY }
         val healthScore = if (flocks.isNotEmpty()) {
             (healthyFlocks.toDouble() / flocks.size) * 100
         } else 100.0
-        
+
         val averageProductionRate = flocks
             .filter { it.flockType == FlockType.LAYING_HENS }
             .mapNotNull { it.productionMetrics?.eggProductionRate }
             .average()
             .takeIf { !it.isNaN() } ?: 0.0
-        
+
         val averageFeedConversion = flocks
             .mapNotNull { it.productionMetrics?.feedConversionRatio }
             .filter { it > 0 }
             .average()
             .takeIf { !it.isNaN() } ?: 0.0
-        
+
         val averageMortalityRate = flocks
             .map { it.getMortalityRate() }
             .average()
@@ -531,10 +631,10 @@ data class FarmAnalytics(
         } else 0.5
         val mortalityScore = ((100 - averageMortalityRate) / 100).coerceIn(0.0, 1.0)
 
-        return (occupancyScore * 0.2 + 
-                healthScoreNormalized * 0.25 + 
-                productionScore * 0.25 + 
-                feedEfficiencyScore * 0.15 + 
+        return (occupancyScore * 0.2 +
+                healthScoreNormalized * 0.25 +
+                productionScore * 0.25 +
+                feedEfficiencyScore * 0.15 +
                 mortalityScore * 0.15)
     }
 

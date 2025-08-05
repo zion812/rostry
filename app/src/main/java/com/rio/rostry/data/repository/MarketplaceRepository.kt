@@ -26,14 +26,111 @@ class MarketplaceRepository @Inject constructor(
         description: String,
         location: String
     ): Result<String> {
+        return createListingWithLineage(
+            fowlId = fowlId,
+            sellerId = sellerId,
+            sellerName = sellerName,
+            price = price,
+            purpose = purpose,
+            description = description,
+            location = location,
+            hasTraceableLineage = false
+        )
+    }
+
+    /**
+     * Create a marketplace listing with enhanced lineage tracking
+     *
+     * @param fowlId ID of the fowl to list
+     * @param sellerId ID of the seller
+     * @param sellerName Name of the seller
+     * @param price Listing price
+     * @param purpose Purpose of the fowl (Breeding Stock, Meat, etc.)
+     * @param description Listing description
+     * @param location Location of the fowl
+     * @param hasTraceableLineage Whether the fowl has traceable lineage
+     * @param motherId ID of the mother fowl (if traceable)
+     * @param fatherId ID of the father fowl (if traceable)
+     * @param generation Generation number (if traceable)
+     * @param bloodlineId Bloodline identifier (if traceable)
+     * @param lineageNotes Additional lineage notes
+     * @return Result with listing ID on success or error on failure
+     */
+    suspend fun createListingWithLineage(
+        fowlId: String,
+        sellerId: String,
+        sellerName: String,
+        price: Double,
+        purpose: String,
+        description: String,
+        location: String,
+        hasTraceableLineage: Boolean = false,
+        motherId: String? = null,
+        fatherId: String? = null,
+        generation: Int? = null,
+        bloodlineId: String? = null,
+        lineageNotes: String = ""
+    ): Result<String> {
         return try {
             // Get fowl details
             val fowl = fowlRepository.getFowlById(fowlId)
                 ?: return Result.failure(Exception("Fowl not found"))
-            
+
             // Verify ownership
             if (fowl.ownerId != sellerId) {
                 return Result.failure(Exception("You can only list fowls you own"))
+            }
+
+            // ENHANCED: Strict lineage data processing
+            val processedLineageData = if (hasTraceableLineage) {
+                // Validate that at least one parent is provided for traceable lineage
+                if (motherId == null && fatherId == null) {
+                    return Result.failure(Exception("Traceable lineage requires at least one parent to be selected"))
+                }
+
+                // Validate parent fowls exist and are owned by the seller
+                motherId?.let { id ->
+                    val mother = fowlRepository.getFowlById(id)
+                    if (mother == null || mother.ownerId != sellerId) {
+                        return Result.failure(Exception("Invalid mother fowl selection"))
+                    }
+                }
+
+                fatherId?.let { id ->
+                    val father = fowlRepository.getFowlById(id)
+                    if (father == null || father.ownerId != sellerId) {
+                        return Result.failure(Exception("Invalid father fowl selection"))
+                    }
+                }
+
+                // Validate generation is positive
+                generation?.let { gen ->
+                    if (gen < 1) {
+                        return Result.failure(Exception("Generation must be a positive number"))
+                    }
+                }
+
+                // Validate lineage notes length
+                if (lineageNotes.length > 500) {
+                    return Result.failure(Exception("Lineage notes must be 500 characters or less"))
+                }
+
+                LineageData(
+                    motherId = motherId,
+                    fatherId = fatherId,
+                    generation = generation,
+                    bloodlineId = bloodlineId?.takeIf { it.isNotBlank() },
+                    lineageNotes = lineageNotes.takeIf { it.isNotBlank() } ?: ""
+                )
+            } else {
+                // Force all lineage data to null/empty for non-traceable mode
+                LineageData(
+                    motherId = null,
+                    fatherId = null,
+                    generation = null,
+                    bloodlineId = null,
+                    lineageNotes = ""
+                )
             }
             
             // Get fowl records for vaccination history
@@ -71,21 +168,31 @@ class MarketplaceRepository @Inject constructor(
                 fowlType = fowl.type.name,
                 fowlGender = fowl.gender.name,
                 fowlAge = ageString,
-                motherId = fowl.motherId,
-                fatherId = fowl.fatherId,
+                motherId = processedLineageData.motherId,
+                fatherId = processedLineageData.fatherId,
                 vaccinationRecords = records.map { "${it.recordType} - ${it.details}" },
                 healthStatus = fowl.status,
                 isBreederReady = fowl.status.contains("Breeder Ready", ignoreCase = true),
+                // Enhanced lineage tracking fields with strict data handling
+                hasTraceableLineage = hasTraceableLineage,
+                lineageVerified = hasTraceableLineage && (processedLineageData.motherId != null || processedLineageData.fatherId != null),
+                generation = processedLineageData.generation,
+                bloodlineId = processedLineageData.bloodlineId,
+                lineageNotes = processedLineageData.lineageNotes,
                 createdAt = System.currentTimeMillis()
             )
             
             // Save listing
             firestore.collection("marketplace_listings").document(listingId).set(listing).await()
             
-            // Update fowl to mark as for sale
+            // Update fowl to mark as for sale and update lineage information with strict data handling
             val updatedFowl = fowl.copy(
                 isForSale = true,
                 price = price,
+                hasTraceableLineage = hasTraceableLineage,
+                lineageVerified = hasTraceableLineage && (processedLineageData.motherId != null || processedLineageData.fatherId != null),
+                generation = processedLineageData.generation ?: fowl.generation,
+                bloodlineId = processedLineageData.bloodlineId ?: fowl.bloodlineId,
                 updatedAt = System.currentTimeMillis()
             )
             fowlRepository.updateFowl(updatedFowl)
@@ -272,3 +379,15 @@ class MarketplaceRepository @Inject constructor(
         }
     }
 }
+
+/**
+ * Helper data class for processing lineage information
+ * Ensures consistent handling of lineage data across traceable and non-traceable modes
+ */
+private data class LineageData(
+    val motherId: String?,
+    val fatherId: String?,
+    val generation: Int?,
+    val bloodlineId: String?,
+    val lineageNotes: String
+)

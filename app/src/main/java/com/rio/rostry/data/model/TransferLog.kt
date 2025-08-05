@@ -70,5 +70,12 @@ data class MarketplaceListing(
     val fatherId: String? = null,
     val vaccinationRecords: List<String> = emptyList(),
     val healthStatus: String = "",
-    val isBreederReady: Boolean = false
+    val isBreederReady: Boolean = false,
+    // Enhanced lineage tracking fields
+    val hasTraceableLineage: Boolean = false,
+    val lineageVerified: Boolean = false,
+    val generation: Int? = null,
+    val bloodlineId: String? = null,
+    val inbreedingCoefficient: Double? = null,
+    val lineageNotes: String = ""
 )

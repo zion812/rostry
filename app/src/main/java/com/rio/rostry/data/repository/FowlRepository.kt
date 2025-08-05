@@ -5,6 +5,8 @@ import com.google.firebase.storage.FirebaseStorage
 import com.rio.rostry.data.local.dao.FowlDao
 import com.rio.rostry.data.model.Fowl
 import com.rio.rostry.data.model.FowlRecord
+import com.rio.rostry.data.common.NetworkResult
+import com.rio.rostry.data.common.safeApiCall
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.collect
@@ -19,7 +21,7 @@ class FowlRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage,
     private val fowlDao: FowlDao
-) {
+) : BaseRepository() {
     
     suspend fun addFowl(fowl: Fowl): Result<String> {
         return try {

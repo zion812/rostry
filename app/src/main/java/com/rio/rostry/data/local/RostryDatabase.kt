@@ -1,14 +1,64 @@
 package com.rio.rostry.data.local
 
+import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import android.content.Context
-import com.rio.rostry.data.local.dao.*
-import com.rio.rostry.data.model.*
+import com.rio.rostry.data.local.dao.CartDao
+import com.rio.rostry.data.local.dao.ChatDao
+import com.rio.rostry.data.local.dao.FarmAccessDao
+import com.rio.rostry.data.local.dao.FarmDao
+import com.rio.rostry.data.local.dao.FlockDao
+import com.rio.rostry.data.local.dao.FlockSummaryDao
+import com.rio.rostry.data.local.dao.FowlDao
+import com.rio.rostry.data.local.dao.FowlRecordDao
+import com.rio.rostry.data.local.dao.InvitationDao
+import com.rio.rostry.data.local.dao.LifecycleDao
+import com.rio.rostry.data.local.dao.LineageDao
+import com.rio.rostry.data.local.dao.MarketplaceListingDao
+import com.rio.rostry.data.local.dao.MessageDao
+import com.rio.rostry.data.local.dao.OrderDao
+import com.rio.rostry.data.local.dao.PostDao
+import com.rio.rostry.data.local.dao.ShowcaseDao
+import com.rio.rostry.data.local.dao.TransferLogDao
+import com.rio.rostry.data.local.dao.UserDao
+import com.rio.rostry.data.local.dao.VerificationDao
+import com.rio.rostry.data.local.dao.WalletDao
+import com.rio.rostry.data.model.AccessAuditLog
+import com.rio.rostry.data.model.Bloodline
+import com.rio.rostry.data.model.BulkInvitation
+import com.rio.rostry.data.model.CartItem
+import com.rio.rostry.data.model.Chat
+import com.rio.rostry.data.model.CoinTransaction
+import com.rio.rostry.data.model.Farm
+import com.rio.rostry.data.model.FarmAccess
+import com.rio.rostry.data.model.FarmInvitation
+import com.rio.rostry.data.model.Flock
+import com.rio.rostry.data.model.FlockSummary
+import com.rio.rostry.data.model.Fowl
+import com.rio.rostry.data.model.FowlLifecycle
+import com.rio.rostry.data.model.FowlLineage
+import com.rio.rostry.data.model.FowlRecord
+import com.rio.rostry.data.model.GrowthMetric
+import com.rio.rostry.data.model.HealthAlert
+import com.rio.rostry.data.model.InvitationAnalytics
+import com.rio.rostry.data.model.InvitationTemplate
+import com.rio.rostry.data.model.LifecycleMilestone
+import com.rio.rostry.data.model.MarketplaceListing
+import com.rio.rostry.data.model.Message
+import com.rio.rostry.data.model.Order
+import com.rio.rostry.data.model.PermissionRequest
+import com.rio.rostry.data.model.Post
+import com.rio.rostry.data.model.ShowcaseSlot
+import com.rio.rostry.data.model.TransferLog
+import com.rio.rostry.data.model.UpcomingTask
+import com.rio.rostry.data.model.User
+import com.rio.rostry.data.model.VaccinationRecord
+import com.rio.rostry.data.model.VerificationRequest
+import com.rio.rostry.data.model.Wallet
 
 @Database(
     entities = [
@@ -41,14 +91,19 @@ import com.rio.rostry.data.model.*
         PermissionRequest::class,
         InvitationTemplate::class,
         BulkInvitation::class,
-        InvitationAnalytics::class
+        InvitationAnalytics::class,
+        // Dashboard Entities
+        HealthAlert::class,
+        UpcomingTask::class,
+        GrowthMetric::class,
+        LifecycleMilestone::class
     ],
-    version = 7,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class RostryDatabase : RoomDatabase() {
-    
+
     abstract fun userDao(): UserDao
     abstract fun fowlDao(): FowlDao
     abstract fun cartDao(): CartDao
@@ -63,25 +118,26 @@ abstract class RostryDatabase : RoomDatabase() {
     abstract fun verificationDao(): VerificationDao
     abstract fun showcaseDao(): ShowcaseDao
     abstract fun flockSummaryDao(): FlockSummaryDao
-    
+
     // Farm Management System DAOs
     abstract fun farmDao(): FarmDao
     abstract fun flockDao(): FlockDao
     abstract fun lifecycleDao(): LifecycleDao
     abstract fun lineageDao(): LineageDao
-    
+
     // Farm Access Management DAOs
     abstract fun farmAccessDao(): FarmAccessDao
     abstract fun invitationDao(): InvitationDao
-    
+
     companion object {
         @Volatile
         private var INSTANCE: RostryDatabase? = null
-        
+
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create fowl_records table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS fowl_records (
                         recordId TEXT PRIMARY KEY NOT NULL,
                         fowlId TEXT NOT NULL,
@@ -98,10 +154,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         createdBy TEXT NOT NULL,
                         createdAt INTEGER NOT NULL
                     )
-                """)
-                
+                """
+                )
+
                 // Create transfer_logs table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS transfer_logs (
                         transferId TEXT PRIMARY KEY NOT NULL,
                         fowlId TEXT NOT NULL,
@@ -120,10 +178,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         verifiedAt INTEGER,
                         rejectedAt INTEGER
                     )
-                """)
-                
+                """
+                )
+
                 // Create marketplace_listings table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS marketplace_listings (
                         listingId TEXT PRIMARY KEY NOT NULL,
                         fowlId TEXT NOT NULL,
@@ -149,14 +209,16 @@ abstract class RostryDatabase : RoomDatabase() {
                         healthStatus TEXT NOT NULL,
                         isBreederReady INTEGER NOT NULL
                     )
-                """)
+                """
+                )
             }
         }
-        
+
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create orders table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS orders (
                         orderId TEXT PRIMARY KEY NOT NULL,
                         buyerId TEXT NOT NULL,
@@ -184,10 +246,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         createdAt INTEGER NOT NULL,
                         updatedAt INTEGER NOT NULL
                     )
-                """)
-                
+                """
+                )
+
                 // Create wallets table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS wallets (
                         userId TEXT PRIMARY KEY NOT NULL,
                         coinBalance INTEGER NOT NULL,
@@ -195,10 +259,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         totalCoinsSpent INTEGER NOT NULL,
                         lastUpdated INTEGER NOT NULL
                     )
-                """)
-                
+                """
+                )
+
                 // Create coin_transactions table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS coin_transactions (
                         transactionId TEXT PRIMARY KEY NOT NULL,
                         userId TEXT NOT NULL,
@@ -211,10 +277,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         balanceAfter INTEGER NOT NULL,
                         timestamp INTEGER NOT NULL
                     )
-                """)
-                
+                """
+                )
+
                 // Create verification_requests table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS verification_requests (
                         requestId TEXT PRIMARY KEY NOT NULL,
                         userId TEXT NOT NULL,
@@ -231,10 +299,12 @@ abstract class RostryDatabase : RoomDatabase() {
                         reviewedAt INTEGER,
                         reviewedBy TEXT
                     )
-                """)
-                
+                """
+                )
+
                 // Create showcase_slots table
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS showcase_slots (
                         slotId TEXT PRIMARY KEY NOT NULL,
                         category TEXT NOT NULL,
@@ -248,20 +318,21 @@ abstract class RostryDatabase : RoomDatabase() {
                         isActive INTEGER NOT NULL,
                         createdAt INTEGER NOT NULL
                     )
-                """)
+                """
+                )
             }
         }
-        
+
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Update users table to add missing columns for monetization features
                 // Use a more robust approach to handle schema changes
-                
+
                 try {
                     // Get current table schema
                     val cursor = database.query("PRAGMA table_info(users)")
                     val existingColumns = mutableSetOf<String>()
-                    
+
                     while (cursor.moveToNext()) {
                         val nameIndex = cursor.getColumnIndex("name")
                         if (nameIndex >= 0) {
@@ -269,7 +340,7 @@ abstract class RostryDatabase : RoomDatabase() {
                         }
                     }
                     cursor.close()
-                    
+
                     // Define columns to add with their SQL
                     val columnsToAdd = mapOf(
                         "isKycVerified" to "ALTER TABLE users ADD COLUMN isKycVerified INTEGER NOT NULL DEFAULT 0",
@@ -285,7 +356,7 @@ abstract class RostryDatabase : RoomDatabase() {
                         "isOnline" to "ALTER TABLE users ADD COLUMN isOnline INTEGER NOT NULL DEFAULT 0",
                         "lastSeen" to "ALTER TABLE users ADD COLUMN lastSeen INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
                     )
-                    
+
                     // Add only missing columns
                     columnsToAdd.forEach { (columnName, sql) ->
                         if (!existingColumns.contains(columnName)) {
@@ -303,7 +374,7 @@ abstract class RostryDatabase : RoomDatabase() {
                 }
             }
         }
-        
+
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // This migration handles any remaining schema inconsistencies for fowls table
@@ -311,7 +382,7 @@ abstract class RostryDatabase : RoomDatabase() {
                     // Get current fowls table schema
                     val cursor = database.query("PRAGMA table_info(fowls)")
                     val existingColumns = mutableSetOf<String>()
-                    
+
                     while (cursor.moveToNext()) {
                         val nameIndex = cursor.getColumnIndex("name")
                         if (nameIndex >= 0) {
@@ -319,7 +390,7 @@ abstract class RostryDatabase : RoomDatabase() {
                         }
                     }
                     cursor.close()
-                    
+
                     // Define columns that should exist in fowls table
                     val requiredColumns = mapOf(
                         "id" to "TEXT PRIMARY KEY NOT NULL",
@@ -346,7 +417,7 @@ abstract class RostryDatabase : RoomDatabase() {
                         "createdAt" to "INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}",
                         "updatedAt" to "INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
                     )
-                    
+
                     // Add missing columns to fowls table
                     requiredColumns.forEach { (columnName, columnDef) ->
                         if (!existingColumns.contains(columnName) && columnName != "id") {
@@ -365,11 +436,12 @@ abstract class RostryDatabase : RoomDatabase() {
                 }
             }
         }
-        
+
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create flock_summary table for dashboard functionality
-                database.execSQL("""
+                database.execSQL(
+                    """
                     CREATE TABLE IF NOT EXISTS flock_summary (
                         ownerId TEXT PRIMARY KEY NOT NULL,
                         totalFowls INTEGER NOT NULL,
@@ -383,15 +455,17 @@ abstract class RostryDatabase : RoomDatabase() {
                         totalValue REAL NOT NULL,
                         lastUpdated INTEGER NOT NULL
                     )
-                """)
+                """
+                )
             }
         }
-        
+
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 try {
                     // Create farms table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS farms (
                             id TEXT PRIMARY KEY NOT NULL,
                             ownerId TEXT NOT NULL,
@@ -412,10 +486,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create flocks table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS flocks (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -439,10 +515,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create fowl_lifecycles table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS fowl_lifecycles (
                             id TEXT PRIMARY KEY NOT NULL,
                             fowlId TEXT NOT NULL,
@@ -462,10 +540,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create fowl_lineages table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS fowl_lineages (
                             id TEXT PRIMARY KEY NOT NULL,
                             fowlId TEXT NOT NULL,
@@ -491,10 +571,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create vaccination_records table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS vaccination_records (
                             id TEXT PRIMARY KEY NOT NULL,
                             flockId TEXT,
@@ -518,10 +600,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             veterinarianApproval INTEGER NOT NULL DEFAULT 0,
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create farm_access table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS farm_access (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -539,10 +623,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create farm_invitations table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS farm_invitations (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -573,10 +659,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create access_audit_log table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS access_audit_log (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -592,10 +680,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             userAgent TEXT NOT NULL DEFAULT '',
                             timestamp INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create permission_requests table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS permission_requests (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -611,10 +701,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             expiresAt INTEGER,
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create invitation_templates table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS invitation_templates (
                             id TEXT PRIMARY KEY NOT NULL,
                             name TEXT NOT NULL,
@@ -633,10 +725,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create bulk_invitations table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS bulk_invitations (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -657,10 +751,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             completedAt INTEGER,
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create invitation_analytics table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS invitation_analytics (
                             id TEXT PRIMARY KEY NOT NULL,
                             farmId TEXT NOT NULL,
@@ -673,10 +769,12 @@ abstract class RostryDatabase : RoomDatabase() {
                             location TEXT NOT NULL DEFAULT '',
                             additionalData TEXT NOT NULL DEFAULT '{}'
                         )
-                    """)
+                    """
+                    )
 
                     // Create bloodlines table
-                    database.execSQL("""
+                    database.execSQL(
+                        """
                         CREATE TABLE IF NOT EXISTS bloodlines (
                             id TEXT PRIMARY KEY NOT NULL,
                             name TEXT NOT NULL,
@@ -693,7 +791,8 @@ abstract class RostryDatabase : RoomDatabase() {
                             createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
                             updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
                         )
-                    """)
+                    """
+                    )
 
                     // Create indexes for performance
                     database.execSQL("CREATE INDEX IF NOT EXISTS idx_farms_owner ON farms(ownerId)")
@@ -711,7 +810,231 @@ abstract class RostryDatabase : RoomDatabase() {
                 }
             }
         }
-        
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                try {
+                    // Create health_alerts table
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS health_alerts (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL DEFAULT '',
+                            flockId TEXT,
+                            fowlId TEXT,
+                            title TEXT NOT NULL DEFAULT '',
+                            description TEXT NOT NULL DEFAULT '',
+                            severity TEXT NOT NULL DEFAULT 'LOW',
+                            category TEXT NOT NULL DEFAULT 'HEALTH',
+                            isRead INTEGER NOT NULL DEFAULT 0,
+                            isResolved INTEGER NOT NULL DEFAULT 0,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            resolvedAt INTEGER,
+                            actionRequired INTEGER NOT NULL DEFAULT 0,
+                            actionUrl TEXT,
+                            metadata TEXT NOT NULL DEFAULT '{}'
+                        )
+                    """
+                    )
+
+                    // Create upcoming_tasks table
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS upcoming_tasks (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            farmId TEXT NOT NULL DEFAULT '',
+                            flockId TEXT,
+                            fowlId TEXT,
+                            title TEXT NOT NULL DEFAULT '',
+                            description TEXT NOT NULL DEFAULT '',
+                            taskType TEXT NOT NULL DEFAULT 'GENERAL',
+                            priority TEXT NOT NULL DEFAULT 'MEDIUM',
+                            status TEXT NOT NULL DEFAULT 'PENDING',
+                            assignedTo TEXT,
+                            assignedBy TEXT NOT NULL DEFAULT '',
+                            dueDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            estimatedDuration INTEGER NOT NULL DEFAULT 30,
+                            isRecurring INTEGER NOT NULL DEFAULT 0,
+                            recurringPattern TEXT,
+                            completedAt INTEGER,
+                            completedBy TEXT,
+                            notes TEXT NOT NULL DEFAULT '',
+                            attachments TEXT NOT NULL DEFAULT '[]',
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """
+                    )
+
+                    // Create growth_metrics table
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS growth_metrics (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            fowlId TEXT NOT NULL DEFAULT '',
+                            flockId TEXT,
+                            measurementDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            weight REAL NOT NULL DEFAULT 0.0,
+                            height REAL,
+                            length REAL,
+                            wingSpan REAL,
+                            bodyConditionScore INTEGER NOT NULL DEFAULT 5,
+                            notes TEXT NOT NULL DEFAULT '',
+                            measuredBy TEXT NOT NULL DEFAULT '',
+                            imageUrl TEXT,
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """
+                    )
+
+                    // Create lifecycle_milestones table
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS lifecycle_milestones (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            fowlId TEXT NOT NULL DEFAULT '',
+                            stage TEXT NOT NULL DEFAULT 'EGG',
+                            milestone TEXT NOT NULL DEFAULT '',
+                            description TEXT NOT NULL DEFAULT '',
+                            achievedDate INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()},
+                            expectedDate INTEGER,
+                            isOnSchedule INTEGER NOT NULL DEFAULT 1,
+                            notes TEXT NOT NULL DEFAULT '',
+                            imageUrl TEXT,
+                            recordedBy TEXT NOT NULL DEFAULT '',
+                            createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}
+                        )
+                    """
+                    )
+
+                    // Create indexes for performance
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_health_alerts_farm ON health_alerts(farmId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_upcoming_tasks_farm ON upcoming_tasks(farmId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_growth_metrics_fowl ON growth_metrics(fowlId)")
+                    database.execSQL("CREATE INDEX IF NOT EXISTS idx_lifecycle_milestones_fowl ON lifecycle_milestones(fowlId)")
+
+                } catch (e: Exception) {
+                    println("Error in MIGRATION_7_8: ${e.message}")
+                    throw e
+                }
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                try {
+                    // Fix MIGRATION_3_4 column detection logic
+                    val cursor = database.query("PRAGMA table_info(users)")
+                    val existingColumns = mutableSetOf<String>()
+
+                    while (cursor.moveToNext()) {
+                        val columnName = cursor.getString(1) // Column name is at index 1 in PRAGMA table_info
+                        existingColumns.add(columnName)
+                    }
+                    cursor.close()
+
+                    // Add missing User columns with proper defaults
+                    val columnsToAdd = mapOf(
+                        "phoneNumber" to "ALTER TABLE users ADD COLUMN phoneNumber TEXT NOT NULL DEFAULT ''",
+                        "location" to "ALTER TABLE users ADD COLUMN location TEXT NOT NULL DEFAULT ''",
+                        "bio" to "ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT ''",
+                        "createdAt" to "ALTER TABLE users ADD COLUMN createdAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}",
+                        "updatedAt" to "ALTER TABLE users ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT ${System.currentTimeMillis()}"
+                    )
+
+                    columnsToAdd.forEach { (columnName, sql) ->
+                        if (!existingColumns.contains(columnName)) {
+                            try {
+                                database.execSQL(sql)
+                            } catch (e: Exception) {
+                                println("Error adding column $columnName: ${e.message}")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("Error in MIGRATION_8_9: ${e.message}")
+                    throw e
+                }
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                try {
+                    // Complete User table recreation with all 22 fields
+                    database.execSQL("""
+                        CREATE TABLE IF NOT EXISTS users_new (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            email TEXT NOT NULL DEFAULT '',
+                            displayName TEXT NOT NULL DEFAULT '',
+                            profileImageUrl TEXT NOT NULL DEFAULT '',
+                            roleId TEXT NOT NULL DEFAULT 'consumer',
+                            phoneNumber TEXT NOT NULL DEFAULT '',
+                            location TEXT NOT NULL DEFAULT '',
+                            bio TEXT NOT NULL DEFAULT '',
+                            isKycVerified INTEGER NOT NULL DEFAULT 0,
+                            kycDocumentUrl TEXT NOT NULL DEFAULT '',
+                            verificationStatus TEXT NOT NULL DEFAULT 'PENDING',
+                            verificationBadges TEXT NOT NULL DEFAULT '[]',
+                            coinBalance INTEGER NOT NULL DEFAULT 0,
+                            totalCoinsEarned INTEGER NOT NULL DEFAULT 0,
+                            totalCoinsSpent INTEGER NOT NULL DEFAULT 0,
+                            sellerRating REAL NOT NULL DEFAULT 0.0,
+                            totalSales INTEGER NOT NULL DEFAULT 0,
+                            joinedDate INTEGER NOT NULL DEFAULT 0,
+                            createdAt INTEGER NOT NULL DEFAULT 0,
+                            updatedAt INTEGER NOT NULL DEFAULT 0,
+                            isOnline INTEGER NOT NULL DEFAULT 0,
+                            lastSeen INTEGER NOT NULL DEFAULT 0
+                        )
+                    """)
+
+                    // Safe data migration with COALESCE for missing columns
+                    database.execSQL("""
+                        INSERT INTO users_new (
+                            id, email, displayName, profileImageUrl, roleId,
+                            phoneNumber, location, bio, isKycVerified, kycDocumentUrl,
+                            verificationStatus, verificationBadges, coinBalance, totalCoinsEarned, totalCoinsSpent,
+                            sellerRating, totalSales, joinedDate, createdAt, updatedAt,
+                            isOnline, lastSeen
+                        )
+                        SELECT
+                            id,
+                            COALESCE(email, '') as email,
+                            COALESCE(displayName, '') as displayName,
+                            COALESCE(profileImageUrl, '') as profileImageUrl,
+                            COALESCE(roleId, 'consumer') as roleId,
+                            COALESCE(phoneNumber, '') as phoneNumber,
+                            COALESCE(location, '') as location,
+                            COALESCE(bio, '') as bio,
+                            COALESCE(isKycVerified, 0) as isKycVerified,
+                            COALESCE(kycDocumentUrl, '') as kycDocumentUrl,
+                            COALESCE(verificationStatus, 'PENDING') as verificationStatus,
+                            COALESCE(verificationBadges, '[]') as verificationBadges,
+                            COALESCE(coinBalance, 0) as coinBalance,
+                            COALESCE(totalCoinsEarned, 0) as totalCoinsEarned,
+                            COALESCE(totalCoinsSpent, 0) as totalCoinsSpent,
+                            COALESCE(sellerRating, 0.0) as sellerRating,
+                            COALESCE(totalSales, 0) as totalSales,
+                            COALESCE(joinedDate, ${System.currentTimeMillis()}) as joinedDate,
+                            COALESCE(createdAt, ${System.currentTimeMillis()}) as createdAt,
+                            COALESCE(updatedAt, ${System.currentTimeMillis()}) as updatedAt,
+                            COALESCE(isOnline, 0) as isOnline,
+                            COALESCE(lastSeen, ${System.currentTimeMillis()}) as lastSeen
+                        FROM users
+                    """)
+
+                    // Replace old table
+                    database.execSQL("DROP TABLE users")
+                    database.execSQL("ALTER TABLE users_new RENAME TO users")
+
+                } catch (e: Exception) {
+                    println("Error in MIGRATION_9_10: ${e.message}")
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): RostryDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -719,9 +1042,19 @@ abstract class RostryDatabase : RoomDatabase() {
                     RostryDatabase::class.java,
                     "rostry_database"
                 )
-                .fallbackToDestructiveMigration() // Allow destructive migration for development
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
-                .build()
+                    .fallbackToDestructiveMigration() // Allow destructive migration for development
+                    .addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3,
+                        MIGRATION_3_4,
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10
+                    )
+                    .build()
                 INSTANCE = instance
                 instance
             }

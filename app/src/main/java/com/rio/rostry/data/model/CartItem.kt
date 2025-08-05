@@ -9,6 +9,7 @@ data class CartItem(
     val id: String = "",
     val fowlId: String = "",
     val fowlName: String = "",
+    val fowlBreed: String = "", // Add missing fowlBreed property
     val fowlImageUrl: String = "",
     val sellerId: String = "",
     val sellerName: String = "",

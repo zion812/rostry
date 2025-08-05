@@ -114,10 +114,23 @@ fun CartScreen(
                             }
                             
                             Button(
-                                onClick = { viewModel.checkout() },
-                                modifier = Modifier.weight(2f)
+                                onClick = { 
+                                    viewModel.checkout { orderId ->
+                                        // Handle successful checkout
+                                        // Could navigate to order confirmation screen
+                                    }
+                                },
+                                modifier = Modifier.weight(2f),
+                                enabled = !uiState.isProcessingCheckout
                             ) {
-                                Text("Checkout")
+                                if (uiState.isProcessingCheckout) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text("Checkout")
+                                }
                             }
                         }
                     }

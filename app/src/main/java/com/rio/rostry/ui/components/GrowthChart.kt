@@ -51,7 +51,7 @@ fun GrowthChart(
             // Header with controls
             GrowthChartHeader(
                 metricsCount = growthMetrics.size,
-                latestMetric = growthMetrics.maxByOrNull { it.date }
+                latestMetric = growthMetrics.maxByOrNull { it.measurementDate }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -140,7 +140,7 @@ private fun GrowthChartHeader(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = formatDate(metric.date),
+                        text = formatDate(metric.measurementDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -158,7 +158,7 @@ private fun GrowthChartCanvas(
     onMetricClick: (GrowthMetric) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sortedMetrics = metrics.sortedBy { it.date }
+    val sortedMetrics = metrics.sortedBy { it.measurementDate }
     
     // Animation for chart drawing
     val animationProgress by animateFloatAsState(
@@ -422,7 +422,7 @@ private fun ChartLabels(
 
             displayMetrics.forEach { metric ->
                 Text(
-                    text = formatDate(metric.date),
+                    text = formatDate(metric.measurementDate),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
@@ -439,8 +439,8 @@ private fun GrowthMetricsSummary(
     metrics: List<GrowthMetric>,
     modifier: Modifier = Modifier
 ) {
-    val latest = metrics.maxByOrNull { it.date }
-    val previous = metrics.filter { it.date < (latest?.date ?: 0) }.maxByOrNull { it.date }
+    val latest = metrics.maxByOrNull { it.measurementDate }
+    val previous = metrics.filter { it.measurementDate < (latest?.measurementDate ?: 0) }.maxByOrNull { it.measurementDate }
     val growthRate = latest?.calculateGrowthRate(previous) ?: 0.0
 
     Row(
@@ -635,7 +635,7 @@ private fun EmptyGrowthChart(
 }
 
 // Helper functions and enums
-private enum class TrendDirection {
+enum class TrendDirection {
     UP, DOWN, STABLE
 }
 
@@ -643,7 +643,7 @@ private fun generateGrowthInsights(metrics: List<GrowthMetric>): List<String> {
     if (metrics.size < 3) return emptyList()
     
     val insights = mutableListOf<String>()
-    val sortedMetrics = metrics.sortedBy { it.date }
+    val sortedMetrics = metrics.sortedBy { it.measurementDate }
     
     // Growth rate analysis
     val recentGrowthRates = sortedMetrics.takeLast(3).zipWithNext { prev, curr ->

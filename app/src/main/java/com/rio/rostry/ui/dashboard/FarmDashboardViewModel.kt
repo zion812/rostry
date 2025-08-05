@@ -83,7 +83,7 @@ class FarmDashboardViewModel @Inject constructor(
     private suspend fun loadLifecycleData() {
         lifecycleRepository.getAllLifecycles().collect { lifecycles ->
             val breedingStock = lifecycles.count { 
-                it.currentStage in listOf(LifecycleStage.ADULT, LifecycleStage.BREEDER_ACTIVE) 
+                it.getCurrentStageEnum() in listOf(LifecycleStage.ADULT, LifecycleStage.BREEDER_ACTIVE) 
             }
 
             _uiState.value = _uiState.value.copy(
@@ -189,11 +189,11 @@ class FarmDashboardViewModel @Inject constructor(
     /**
      * Handle health alert
      */
-    fun handleAlert(alert: String) {
+    fun handleAlert(alert: HealthAlert) {
         viewModelScope.launch {
             try {
                 // Mark alert as handled or navigate to detailed view
-                farmRepository.markAlertAsHandled(alert)
+                farmRepository.markAlertAsHandled(alert.id)
                 refreshData()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -206,10 +206,10 @@ class FarmDashboardViewModel @Inject constructor(
     /**
      * Complete task
      */
-    fun completeTask(task: String) {
+    fun completeTask(task: UpcomingTask) {
         viewModelScope.launch {
             try {
-                farmRepository.completeTask(task)
+                farmRepository.completeTask(task.id)
                 refreshData()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -243,7 +243,7 @@ class FarmDashboardViewModel @Inject constructor(
         )
     }
 
-    private fun calculateHealthScore(flocks: List<Flock>, alerts: List<String>): Double {
+    private fun calculateHealthScore(flocks: List<Flock>, alerts: List<HealthAlert>): Double {
         if (flocks.isEmpty()) return 100.0
         
         val healthyFlocks = flocks.count { it.healthStatus == FlockHealthStatus.HEALTHY }
@@ -276,8 +276,8 @@ data class FarmDashboardUiState(
     val activeFlocks: Int = 0,
     val breedingStock: Int = 0,
     val dailyEggProduction: Int = 0,
-    val healthAlerts: List<String> = emptyList(),
-    val upcomingTasks: List<String> = emptyList(),
+    val healthAlerts: List<HealthAlert> = emptyList(),
+    val upcomingTasks: List<UpcomingTask> = emptyList(),
     val recentActivities: List<String> = emptyList(),
     val error: String? = null
 )
@@ -291,8 +291,8 @@ private data class FarmDashboardData(
     val totalFowls: Int,
     val breedingStock: Int,
     val dailyEggProduction: Int,
-    val healthAlerts: List<String>,
-    val upcomingTasks: List<String>,
+    val healthAlerts: List<HealthAlert>,
+    val upcomingTasks: List<UpcomingTask>,
     val recentActivities: List<String>
 )
 

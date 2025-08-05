@@ -8,7 +8,7 @@ import java.util.UUID
 /**
  * Comprehensive fowl lineage and family tree tracking
  */
-@Entity(tableName = "fowl_lineage")
+@Entity(tableName = "fowl_lineages")
 data class FowlLineage(
     @PrimaryKey
     @DocumentId

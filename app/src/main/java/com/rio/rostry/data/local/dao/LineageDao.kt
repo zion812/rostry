@@ -41,62 +41,62 @@ interface LineageDao {
     /**
      * Get lineage by fowl ID
      */
-    @Query("SELECT * FROM fowl_lineage WHERE fowlId = :fowlId LIMIT 1")
+    @Query("SELECT * FROM fowl_lineages WHERE fowlId = :fowlId LIMIT 1")
     suspend fun getLineageByFowlId(fowlId: String): FowlLineage?
 
     /**
      * Get lineage by fowl ID as Flow for reactive updates
      */
-    @Query("SELECT * FROM fowl_lineage WHERE fowlId = :fowlId LIMIT 1")
+    @Query("SELECT * FROM fowl_lineages WHERE fowlId = :fowlId LIMIT 1")
     fun getLineageByFowlIdFlow(fowlId: String): Flow<FowlLineage?>
 
     /**
      * Get lineage by ID
      */
-    @Query("SELECT * FROM fowl_lineage WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM fowl_lineages WHERE id = :id LIMIT 1")
     suspend fun getLineageById(id: String): FowlLineage?
 
     /**
      * Get all lineages
      */
-    @Query("SELECT * FROM fowl_lineage ORDER BY generation ASC, createdAt DESC")
+    @Query("SELECT * FROM fowl_lineages ORDER BY generation ASC, createdAt DESC")
     fun getAllLineages(): Flow<List<FowlLineage>>
 
     /**
      * Get all lineages as list (for breeding recommendations)
      */
-    @Query("SELECT * FROM fowl_lineage ORDER BY generation ASC, createdAt DESC")
+    @Query("SELECT * FROM fowl_lineages ORDER BY generation ASC, createdAt DESC")
     suspend fun getAllLineagesList(): List<FowlLineage>
 
     /**
      * Get lineages by generation
      */
-    @Query("SELECT * FROM fowl_lineage WHERE generation = :generation ORDER BY createdAt DESC")
+    @Query("SELECT * FROM fowl_lineages WHERE generation = :generation ORDER BY createdAt DESC")
     fun getLineagesByGeneration(generation: Int): Flow<List<FowlLineage>>
 
     /**
      * Get lineages by bloodline
      */
-    @Query("SELECT * FROM fowl_lineage WHERE bloodlineId = :bloodlineId ORDER BY generation ASC")
+    @Query("SELECT * FROM fowl_lineages WHERE bloodlineId = :bloodlineId ORDER BY generation ASC")
     fun getLineagesByBloodline(bloodlineId: String): Flow<List<FowlLineage>>
 
     /**
      * Get offspring of a specific fowl
      */
-    @Query("SELECT * FROM fowl_lineage WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM fowl_lineages WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
     fun getOffspringByParent(parentId: String): Flow<List<FowlLineage>>
 
     /**
      * Get lineages by parent ID (for family tree)
      */
-    @Query("SELECT * FROM fowl_lineage WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM fowl_lineages WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
     suspend fun getLineagesByParentId(parentId: String): List<FowlLineage>
 
     /**
      * Get siblings (same parents)
      */
     @Query("""
-        SELECT * FROM fowl_lineage 
+        SELECT * FROM fowl_lineages 
         WHERE (parentMaleId = :parentMaleId AND parentFemaleId = :parentFemaleId)
         AND fowlId != :excludeFowlId
         ORDER BY createdAt DESC
@@ -106,20 +106,20 @@ interface LineageDao {
     /**
      * Get verified lineages only
      */
-    @Query("SELECT * FROM fowl_lineage WHERE lineageVerified = 1 ORDER BY generation ASC")
+    @Query("SELECT * FROM fowl_lineages WHERE lineageVerified = 1 ORDER BY generation ASC")
     fun getVerifiedLineages(): Flow<List<FowlLineage>>
 
     /**
      * Get lineages needing verification
      */
-    @Query("SELECT * FROM fowl_lineage WHERE lineageVerified = 0 ORDER BY createdAt ASC")
+    @Query("SELECT * FROM fowl_lineages WHERE lineageVerified = 0 ORDER BY createdAt ASC")
     fun getUnverifiedLineages(): Flow<List<FowlLineage>>
 
     /**
      * Get potential breeding pairs count
      */
     @Query("""
-        SELECT COUNT(*) FROM fowl_lineage l1, fowl_lineage l2
+        SELECT COUNT(*) FROM fowl_lineages l1, fowl_lineages l2
         WHERE l1.fowlId != l2.fowlId
         AND l1.bloodlineId != l2.bloodlineId
         AND l1.inbreedingCoefficient < 0.25
@@ -132,13 +132,13 @@ interface LineageDao {
     /**
      * Get direct offspring count
      */
-    @Query("SELECT COUNT(*) FROM fowl_lineage WHERE parentMaleId = :fowlId OR parentFemaleId = :fowlId")
+    @Query("SELECT COUNT(*) FROM fowl_lineages WHERE parentMaleId = :fowlId OR parentFemaleId = :fowlId")
     suspend fun getDirectOffspringCount(fowlId: String): Int
 
     /**
      * Get generation count for fowl
      */
-    @Query("SELECT generation FROM fowl_lineage WHERE fowlId = :fowlId LIMIT 1")
+    @Query("SELECT generation FROM fowl_lineages WHERE fowlId = :fowlId LIMIT 1")
     suspend fun getFowlGeneration(fowlId: String): Int?
 
     /**
@@ -146,7 +146,7 @@ interface LineageDao {
      */
     @Query("""
         SELECT COUNT(*) as sharedAncestors
-        FROM fowl_lineage l1, fowl_lineage l2
+        FROM fowl_lineages l1, fowl_lineages l2
         WHERE l1.fowlId = :fowlId
         AND (l1.parentMaleId = l2.parentMaleId OR l1.parentFemaleId = l2.parentFemaleId)
         AND l1.fowlId != l2.fowlId
@@ -156,19 +156,19 @@ interface LineageDao {
     /**
      * Get total lineage count
      */
-    @Query("SELECT COUNT(*) FROM fowl_lineage")
+    @Query("SELECT COUNT(*) FROM fowl_lineages")
     suspend fun getTotalLineageCount(): Int
 
     /**
      * Get verified lineage count
      */
-    @Query("SELECT COUNT(*) FROM fowl_lineage WHERE lineageVerified = 1")
+    @Query("SELECT COUNT(*) FROM fowl_lineages WHERE lineageVerified = 1")
     suspend fun getVerifiedLineageCount(): Int
 
     /**
      * Get average generation
      */
-    @Query("SELECT AVG(generation) FROM fowl_lineage")
+    @Query("SELECT AVG(generation) FROM fowl_lineages")
     suspend fun getAverageGeneration(): Double
 
     // ==================== BLOODLINE OPERATIONS ====================
@@ -280,15 +280,15 @@ interface LineageDao {
     @Query("""
         UPDATE bloodlines 
         SET activeBreeders = (
-            SELECT COUNT(*) FROM fowl_lineage 
+            SELECT COUNT(*) FROM fowl_lineages 
             WHERE bloodlineId = :bloodlineId 
             AND fowlId IN (
-                SELECT fowlId FROM fowl_lifecycle 
+                SELECT fowlId FROM fowl_lifecycles 
                 WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')
             )
         ),
         totalOffspring = (
-            SELECT COUNT(*) FROM fowl_lineage 
+            SELECT COUNT(*) FROM fowl_lineages 
             WHERE bloodlineId = :bloodlineId
         ),
         updatedAt = :currentTime
@@ -299,7 +299,7 @@ interface LineageDao {
     /**
      * Delete lineages older than specified date
      */
-    @Query("DELETE FROM fowl_lineage WHERE createdAt < :cutoffDate")
+    @Query("DELETE FROM fowl_lineages WHERE createdAt < :cutoffDate")
     suspend fun deleteOldLineages(cutoffDate: Long)
 
     /**
@@ -312,10 +312,9 @@ interface LineageDao {
      * Get breeding candidate count
      */
     @Query("""
-        SELECT COUNT(*) FROM fowl_lineage
-        WHERE lineageVerified = 1
-        AND fowlId IN (
-            SELECT fowlId FROM fowl_lifecycle 
+        SELECT COUNT(*) FROM fowl_lineages
+        WHERE fowlId IN (
+            SELECT fowlId FROM fowl_lifecycles 
             WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')
         )
     """)

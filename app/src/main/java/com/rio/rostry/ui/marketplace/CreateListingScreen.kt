@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.rio.rostry.data.model.Fowl
+import com.rio.rostry.ui.marketplace.components.LineageTrackingSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +36,23 @@ fun CreateListingScreen(
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var showFowlSelection by remember { mutableStateOf(true) }
+    
+    // Enhanced lineage tracking state with data clearing functionality
+    var hasTraceableLineage by remember { mutableStateOf(false) }
+    var selectedMotherId by remember { mutableStateOf<String?>(null) }
+    var selectedFatherId by remember { mutableStateOf<String?>(null) }
+    var generation by remember { mutableStateOf("") }
+    var bloodlineId by remember { mutableStateOf("") }
+    var lineageNotes by remember { mutableStateOf("") }
+
+    // Function to clear all lineage data
+    val clearAllLineageData = {
+        selectedMotherId = null
+        selectedFatherId = null
+        generation = ""
+        bloodlineId = ""
+        lineageNotes = ""
+    }
     
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
@@ -67,6 +85,12 @@ fun CreateListingScreen(
                                         purpose = purpose,
                                         description = description,
                                         location = location,
+                                        hasTraceableLineage = hasTraceableLineage,
+                                        motherId = selectedMotherId,
+                                        fatherId = selectedFatherId,
+                                        generation = generation.toIntOrNull(),
+                                        bloodlineId = bloodlineId.takeIf { it.isNotBlank() },
+                                        lineageNotes = lineageNotes,
                                         onSuccess = onListingCreated
                                     )
                                 }
@@ -276,6 +300,24 @@ fun CreateListingScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     placeholder = { Text("City, State") }
+                )
+                
+                // Enhanced Lineage Tracking Section with Data Clearing
+                LineageTrackingSection(
+                    hasTraceableLineage = hasTraceableLineage,
+                    onLineageToggle = { hasTraceableLineage = it },
+                    selectedMotherId = selectedMotherId,
+                    onMotherSelected = { selectedMotherId = it },
+                    selectedFatherId = selectedFatherId,
+                    onFatherSelected = { selectedFatherId = it },
+                    generation = generation,
+                    onGenerationChange = { generation = it },
+                    bloodlineId = bloodlineId,
+                    onBloodlineChange = { bloodlineId = it },
+                    lineageNotes = lineageNotes,
+                    onLineageNotesChange = { lineageNotes = it },
+                    availableFowls = viewModel.getBreedingCandidates(selectedFowl),
+                    onClearLineageData = clearAllLineageData
                 )
                 
                 // Auto-populated Information

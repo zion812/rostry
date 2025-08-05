@@ -118,8 +118,8 @@ private fun DashboardContent(
     onUpdateGrowth: () -> Unit,
     onManageFeeding: () -> Unit,
     onCreateFlock: () -> Unit,
-    onHandleAlert: (String) -> Unit,
-    onCompleteTask: (String) -> Unit,
+    onHandleAlert: (HealthAlert) -> Unit,
+    onCompleteTask: (UpcomingTask) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -639,8 +639,8 @@ private fun FlockCard(
 
 @Composable
 private fun HealthAlertsCard(
-    alerts: List<String>,
-    onAlertClick: (String) -> Unit
+    alerts: List<HealthAlert>,
+    onAlertClick: (HealthAlert) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -684,7 +684,7 @@ private fun HealthAlertsCard(
 
 @Composable
 private fun AlertItem(
-    alert: String,
+    alert: HealthAlert,
     onClick: () -> Unit
 ) {
     Card(
@@ -707,7 +707,7 @@ private fun AlertItem(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = alert,
+                text = alert.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
@@ -726,8 +726,8 @@ private fun AlertItem(
 
 @Composable
 private fun UpcomingTasksCard(
-    tasks: List<String>,
-    onTaskComplete: (String) -> Unit
+    tasks: List<UpcomingTask>,
+    onTaskComplete: (UpcomingTask) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -767,7 +767,7 @@ private fun UpcomingTasksCard(
 
 @Composable
 private fun TaskItem(
-    task: String,
+    task: UpcomingTask,
     onComplete: () -> Unit
 ) {
     Row(
@@ -780,7 +780,7 @@ private fun TaskItem(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = task,
+            text = task.title,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )

@@ -39,56 +39,50 @@ interface LifecycleDao {
     /**
      * Get lifecycle by fowl ID
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE fowlId = :fowlId LIMIT 1")
+    @Query("SELECT * FROM fowl_lifecycles WHERE fowlId = :fowlId LIMIT 1")
     suspend fun getLifecycleByFowlId(fowlId: String): FowlLifecycle?
 
     /**
      * Get lifecycle by fowl ID as Flow for reactive updates
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE fowlId = :fowlId LIMIT 1")
+    @Query("SELECT * FROM fowl_lifecycles WHERE fowlId = :fowlId LIMIT 1")
     fun getLifecycleByFowlIdFlow(fowlId: String): Flow<FowlLifecycle?>
 
     /**
      * Get lifecycle by ID
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM fowl_lifecycles WHERE id = :id LIMIT 1")
     suspend fun getLifecycleById(id: String): FowlLifecycle?
 
     /**
      * Get all lifecycles
      */
-    @Query("SELECT * FROM fowl_lifecycle ORDER BY createdAt DESC")
+    @Query("SELECT * FROM fowl_lifecycles ORDER BY createdAt DESC")
     fun getAllLifecycles(): Flow<List<FowlLifecycle>>
 
     /**
      * Get lifecycles by current stage
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE currentStage = :stage ORDER BY stageStartDate DESC")
-    fun getLifecyclesByStage(stage: LifecycleStage): Flow<List<FowlLifecycle>>
+    @Query("SELECT * FROM fowl_lifecycles WHERE currentStage = :stage ORDER BY stageStartDate DESC")
+    fun getLifecyclesByStage(stage: String): Flow<List<FowlLifecycle>>
 
     /**
-     * Get lifecycles by batch ID
+     * Get lifecycles by farm ID
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE batchId = :batchId ORDER BY createdAt DESC")
-    fun getLifecyclesByBatch(batchId: String): Flow<List<FowlLifecycle>>
-
-    /**
-     * Get lifecycles by parent (male or female)
-     */
-    @Query("SELECT * FROM fowl_lifecycle WHERE parentMaleId = :parentId OR parentFemaleId = :parentId ORDER BY createdAt DESC")
-    fun getLifecyclesByParent(parentId: String): Flow<List<FowlLifecycle>>
+    @Query("SELECT * FROM fowl_lifecycles WHERE farmId = :farmId ORDER BY createdAt DESC")
+    fun getLifecyclesByFarm(farmId: String): Flow<List<FowlLifecycle>>
 
     /**
      * Get breeding candidates (adult stage fowls)
      */
-    @Query("SELECT * FROM fowl_lifecycle WHERE isBreederCandidate = 1 AND currentStage IN ('ADULT', 'BREEDER_ACTIVE') ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM fowl_lifecycles WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE') ORDER BY updatedAt DESC")
     fun getBreedingCandidates(): Flow<List<FowlLifecycle>>
 
     /**
      * Get fowls ready for stage transition
      */
     @Query("""
-        SELECT * FROM fowl_lifecycle 
+        SELECT * FROM fowl_lifecycles 
         WHERE (stageStartDate + (CASE 
             WHEN currentStage = 'EGG' THEN 3 * 7 * 24 * 60 * 60 * 1000
             WHEN currentStage = 'HATCHING' THEN 1 * 7 * 24 * 60 * 60 * 1000
@@ -104,28 +98,18 @@ interface LifecycleDao {
     /**
      * Get lifecycle count by stage
      */
-    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE currentStage = :stage")
+    @Query("SELECT COUNT(*) FROM fowl_lifecycles WHERE currentStage = :stage")
     suspend fun getLifecycleCountByStage(stage: String): Int
-
-    /**
-     * Get average weight for a specific stage
-     */
-    @Query("""
-        SELECT AVG(json_extract(growthMetrics, '$[*].weight'))
-        FROM fowl_lifecycle 
-        WHERE currentStage = :stage
-    """)
-    suspend fun getAverageWeightForStage(stage: String): Double
 
     /**
      * Get fowls with overdue milestones
      */
     @Query("""
-        SELECT * FROM fowl_lifecycle 
-        WHERE expectedNextStageDate > 0 
-        AND expectedNextStageDate < :currentTime 
+        SELECT * FROM fowl_lifecycles 
+        WHERE expectedTransitionDate > 0 
+        AND expectedTransitionDate < :currentTime 
         AND currentStage NOT IN ('ADULT', 'BREEDER_ACTIVE')
-        ORDER BY expectedNextStageDate ASC
+        ORDER BY expectedTransitionDate ASC
     """)
     fun getOverdueFowls(currentTime: Long = System.currentTimeMillis()): Flow<List<FowlLifecycle>>
 
@@ -133,11 +117,10 @@ interface LifecycleDao {
      * Search lifecycles by fowl characteristics
      */
     @Query("""
-        SELECT fl.* FROM fowl_lifecycle fl
+        SELECT fl.* FROM fowl_lifecycles fl
         INNER JOIN fowls f ON fl.fowlId = f.id
         WHERE f.name LIKE '%' || :query || '%' 
         OR f.breed LIKE '%' || :query || '%'
-        OR fl.batchId LIKE '%' || :query || '%'
         ORDER BY fl.updatedAt DESC
     """)
     fun searchLifecycles(query: String): Flow<List<FowlLifecycle>>
@@ -146,7 +129,7 @@ interface LifecycleDao {
      * Get lifecycle count by user/owner
      */
     @Query("""
-        SELECT COUNT(*) FROM fowl_lifecycle fl
+        SELECT COUNT(*) FROM fowl_lifecycles fl
         INNER JOIN fowls f ON fl.fowlId = f.id
         WHERE f.ownerId = :ownerId
     """)
@@ -156,7 +139,7 @@ interface LifecycleDao {
      * Get recent lifecycle activities (last 30 days)
      */
     @Query("""
-        SELECT * FROM fowl_lifecycle 
+        SELECT * FROM fowl_lifecycles 
         WHERE updatedAt >= :thirtyDaysAgo 
         ORDER BY updatedAt DESC
         LIMIT :limit
@@ -169,33 +152,21 @@ interface LifecycleDao {
     /**
      * Get total breeder count
      */
-    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')")
+    @Query("SELECT COUNT(*) FROM fowl_lifecycles WHERE currentStage IN ('ADULT', 'BREEDER_ACTIVE')")
     suspend fun getTotalBreederCount(): Int
-
-    /**
-     * Get breeding candidate count
-     */
-    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE isBreederCandidate = 1")
-    suspend fun getBreedingCandidateCount(): Int
 
     /**
      * Delete lifecycles older than specified date
      */
-    @Query("DELETE FROM fowl_lifecycle WHERE createdAt < :cutoffDate")
+    @Query("DELETE FROM fowl_lifecycles WHERE createdAt < :cutoffDate")
     suspend fun deleteOldLifecycles(cutoffDate: Long)
-
-    /**
-     * Get total lifecycle count by batch
-     */
-    @Query("SELECT COUNT(*) FROM fowl_lifecycle WHERE batchId = :batchId")
-    suspend fun getLifecycleCountByBatch(batchId: String): Int
 
     /**
      * Get fowls by generation (for lineage analysis)
      */
     @Query("""
-        SELECT fl.* FROM fowl_lifecycle fl
-        INNER JOIN fowl_lineage lin ON fl.fowlId = lin.fowlId
+        SELECT fl.* FROM fowl_lifecycles fl
+        INNER JOIN fowl_lineages lin ON fl.fowlId = lin.fowlId
         WHERE lin.generation = :generation
         ORDER BY fl.createdAt DESC
     """)
