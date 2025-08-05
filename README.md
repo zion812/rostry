@@ -251,7 +251,7 @@ app/src/main/java/com/rio/rostry/
   - Core DAOs: UserDao, FowlDao, PostDao, ChatDao, MessageDao, CartDao, OrderDao, WalletDao
   - Farm Management DAOs: FarmDao, FlockDao, LifecycleDao, LineageDao, VaccinationDao
   - Access Control DAOs: FarmAccessDao, InvitationDao, AuditLogDao
-- **Database Version**: 7 (with complete farm management and access control system)
+- **Database Version**: 12 (with complete farm management and access control system)
 
 ### Firebase Collections (Cloud Storage)
 - `users` - User profiles, authentication data, and role information
@@ -318,13 +318,8 @@ jvmTarget = "11"
 - [Database Schema](docs/DATABASE_SCHEMA.md) - Comprehensive database design and entity relationships
 - [Development Guide](docs/DEVELOPMENT_GUIDE.md) - Setup, contribution guidelines, and best practices
 - [Farm Management System](docs/FARM_MANAGEMENT_SYSTEM.md) - Farm operations and collaboration features
-- [Farm Access Management](docs/FARM_ACCESS_MANAGEMENT_SYSTEM.md) - Role-based access control system
+- [Lineage Tracking Implementation](docs/LINEAGE_TRACKING_IMPLEMENTATION.md) - Enhanced lineage tracking system guide
 - [Navigation Flow](docs/NAVIGATION_FLOW.md) - App navigation structure and user flows
-- [Implementation Guide](docs/IMPLEMENTATION_GUIDE.md) - Feature implementation details and patterns
-
-### Project Status Documentation
-- [Project Blueprint](docs/PROJECT_BLUEPRINT.md) - Overall project structure and goals
-- [Documentation Audit Summary](docs/DOCUMENTATION_AUDIT_SUMMARY.md) - Documentation maintenance status
 
 ## 🤝 Contributing
 

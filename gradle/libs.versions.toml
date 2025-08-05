@@ -23,6 +23,7 @@ hiltAndroid = "2.52"
 hiltNavigationCompose = "1.2.0"
 coil = "2.7.0"
 room = "2.6.1"
+paging = "3.3.5"
 coroutines = "1.9.0"
 datastore = "1.1.1"
 accompanistPermissions = "0.32.0"
@@ -79,6 +80,10 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+
+# Paging
+androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

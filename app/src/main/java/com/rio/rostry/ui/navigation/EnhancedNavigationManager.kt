@@ -15,7 +15,8 @@ class EnhancedNavigationManager(
     private val userStateFlow: StateFlow<User?>
 ) {
     
-    private val currentUser by userStateFlow.collectAsState()
+    // Remove Composable context - use direct state access instead
+    private fun getCurrentUser(): User? = userStateFlow.value
     
     /**
      * Navigate with permission checking
@@ -111,7 +112,7 @@ class EnhancedNavigationManager(
      * Get available destinations for current user
      */
     fun getAvailableDestinations(): List<NavigationDestination> {
-        val user = currentUser ?: return emptyList()
+        val user = getCurrentUser() ?: return emptyList()
         
         return NavigationDestination.values().filter { destination ->
             val requiredPermission = destination.requiredPermission
@@ -123,7 +124,7 @@ class EnhancedNavigationManager(
      * Check if user has specific permission
      */
     private fun hasPermission(permission: Permission): Boolean {
-        val user = currentUser ?: return false
+        val user = getCurrentUser() ?: return false
         return PermissionChecker.hasPermission(user, permission)
     }
     
@@ -131,7 +132,7 @@ class EnhancedNavigationManager(
      * Check if user has specific role
      */
     private fun hasRole(role: UserRole): Boolean {
-        val user = currentUser ?: return false
+        val user = getCurrentUser() ?: return false
         return user.role == role || isHigherRole(user.role, role)
     }
     
@@ -140,10 +141,9 @@ class EnhancedNavigationManager(
      */
     private fun isHigherRole(userRole: UserRole, requiredRole: UserRole): Boolean {
         val roleHierarchy = mapOf(
-            UserRole.ADMIN to 4,
-            UserRole.FARM_MANAGER to 3,
-            UserRole.BREEDER to 2,
-            UserRole.BUYER to 1
+            UserRole.ENTHUSIAST to 3,  // Highest level user
+            UserRole.FARMER to 2,      // Farm management capabilities
+            UserRole.GENERAL to 1      // Basic user
         )
         
         return (roleHierarchy[userRole] ?: 0) >= (roleHierarchy[requiredRole] ?: 0)
@@ -205,42 +205,34 @@ enum class NavigationDestination(
 object PermissionChecker {
     fun hasPermission(user: User, permission: Permission): Boolean {
         return when (user.role) {
-            UserRole.ADMIN -> true // Admin has all permissions
-            UserRole.FARM_MANAGER -> hasManagerPermission(permission)
-            UserRole.BREEDER -> hasBreederPermission(permission)
-            UserRole.BUYER -> hasBuyerPermission(permission)
+            UserRole.ENTHUSIAST -> true // Enthusiast has all permissions
+            UserRole.FARMER -> hasFarmerPermission(permission)
+            UserRole.GENERAL -> hasGeneralPermission(permission)
         }
     }
     
-    private fun hasManagerPermission(permission: Permission): Boolean {
+    private fun hasFarmerPermission(permission: Permission): Boolean {
         return when (permission) {
             is Permission.Farm -> true
+            is Permission.Analytics -> true
+            is Permission.Team -> true
             is Permission.Admin -> false
             is Permission.Marketplace -> true
         }
     }
     
-    private fun hasBreederPermission(permission: Permission): Boolean {
-        return when (permission) {
-            is Permission.Farm.VIEW_OWN,
-            is Permission.Farm.MANAGE_BASIC -> true
-            is Permission.Farm.MANAGE_ADVANCED,
-            is Permission.Admin -> false
-            is Permission.Marketplace -> true
-        }
-    }
-    
-    private fun hasBuyerPermission(permission: Permission): Boolean {
+    private fun hasGeneralPermission(permission: Permission): Boolean {
         return when (permission) {
             is Permission.Marketplace.VIEW,
             is Permission.Marketplace.PURCHASE -> true
+            is Permission.Farm.VIEW_OWN -> true
             else -> false
         }
     }
 }
 
 /**
- * Permission hierarchy
+ * Permission hierarchy - Comprehensive permission system for ROSTRY
  */
 sealed class Permission {
     sealed class Farm : Permission() {
@@ -258,5 +250,15 @@ sealed class Permission {
         object VIEW : Marketplace()
         object PURCHASE : Marketplace()
         object SELL : Marketplace()
+    }
+    
+    sealed class Analytics : Permission() {
+        object BASIC : Analytics()
+        object ADVANCED : Analytics()
+    }
+    
+    sealed class Team : Permission() {
+        object MANAGE : Team()
+        object VIEW : Team()
     }
 }

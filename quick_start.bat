@@ -1,4 +1,4 @@
-husiast@echo off
+@echo off
 echo.
 echo ========================================
 echo    ROSTRY - Quick Start Script

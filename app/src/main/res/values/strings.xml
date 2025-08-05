@@ -1,3 +1,64 @@
 <resources>
-    <string name="app_name">rostry</string>
+    <string name="app_name">ROSTRY</string>
+    
+    <!-- Error Messages -->
+    <string name="error_no_internet">No internet connection. Please check your network settings.</string>
+    <string name="error_timeout">Request timed out. Please try again.</string>
+    <string name="error_permission_denied">Permission denied. You don\'t have access to this resource.</string>
+    <string name="error_invalid_input">Invalid input provided. Please check your data.</string>
+    <string name="error_unknown">An unexpected error occurred. Please try again.</string>
+    
+    <!-- Authentication Error Messages -->
+    <string name="error_invalid_email">Invalid email address format.</string>
+    <string name="error_wrong_password">Incorrect password. Please try again.</string>
+    <string name="error_user_not_found">No account found with this email address.</string>
+    <string name="error_user_disabled">This account has been disabled. Contact support.</string>
+    <string name="error_too_many_requests">Too many failed attempts. Please try again later.</string>
+    <string name="error_email_in_use">An account with this email already exists.</string>
+    <string name="error_weak_password">Password is too weak. Please choose a stronger password.</string>
+    <string name="error_auth_failed">Authentication failed. Please try again.</string>
+    
+    <!-- Database Error Messages -->
+    <string name="error_service_unavailable">Service temporarily unavailable. Please try again later.</string>
+    <string name="error_quota_exceeded">Usage quota exceeded. Please try again later.</string>
+    <string name="error_database_failed">Database operation failed. Please try again.</string>
+    
+    <!-- Action Labels -->
+    <string name="action_retry">Retry</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    
+    <!-- General UI Strings -->
+    <string name="loading">Loading…</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="warning">Warning</string>
+    <string name="info">Information</string>
+    
+    <!-- Navigation Strings -->
+    <string name="nav_home">Home</string>
+    <string name="nav_marketplace">Marketplace</string>
+    <string name="nav_my_fowls">My Fowls</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_chat">Chat</string>
+    
+    <!-- Feature Strings -->
+    <string name="lineage_tracking">Lineage Tracking</string>
+    <string name="farm_management">Farm Management</string>
+    <string name="analytics">Analytics</string>
+    <string name="verification">Verification</string>
+    <string name="wallet">Wallet</string>
+    
+    <!-- Status Messages -->
+    <string name="sync_in_progress">Synchronizing data…</string>
+    <string name="sync_completed">Data synchronized successfully</string>
+    <string name="sync_failed">Synchronization failed</string>
+    
+    <!-- Validation Messages -->
+    <string name="field_required">This field is required</string>
+    <string name="invalid_format">Invalid format</string>
+    <string name="value_too_long">Value is too long</string>
+    <string name="value_too_short">Value is too short</string>
 </resources>

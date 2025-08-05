@@ -5,6 +5,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -38,6 +39,7 @@ fun AdaptiveGrid(
         WindowWidthSizeClass.Compact -> 2 to 8.dp
         WindowWidthSizeClass.Medium -> 3 to 12.dp
         WindowWidthSizeClass.Expanded -> 4 to 16.dp
+        else -> 2 to 8.dp // Default to compact layout
     }
     
     content(columns, spacing)
@@ -52,6 +54,7 @@ fun Modifier.responsivePadding(windowSizeClass: WindowSizeClass): Modifier {
         WindowWidthSizeClass.Compact -> 16.dp
         WindowWidthSizeClass.Medium -> 24.dp
         WindowWidthSizeClass.Expanded -> 32.dp
+        else -> 16.dp // Default to compact padding
     }
     return this.padding(padding)
 }
@@ -65,6 +68,7 @@ fun Modifier.responsiveContentWidth(windowSizeClass: WindowSizeClass): Modifier 
         WindowWidthSizeClass.Compact -> this.fillMaxWidth()
         WindowWidthSizeClass.Medium -> this.fillMaxWidth().widthIn(max = 800.dp)
         WindowWidthSizeClass.Expanded -> this.fillMaxWidth().widthIn(max = 1200.dp)
+        else -> this.fillMaxWidth() // Default to compact width
     }
 }
 

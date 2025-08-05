@@ -103,7 +103,7 @@ class CartViewModel @Inject constructor(
                     productTotal = _uiState.value.total,
                     grandTotal = _uiState.value.total,
                     status = OrderStatus.PENDING,
-                    deliveryAddress = "", // TODO: Add address selection
+                    deliveryAddress = getDefaultDeliveryAddress(currentUser.uid),
                     createdAt = System.currentTimeMillis()
                 )
                 
@@ -136,6 +136,15 @@ class CartViewModel @Inject constructor(
     
     fun clearCheckoutMessage() {
         _uiState.value = _uiState.value.copy(checkoutMessage = null)
+    }
+    
+    /**
+     * Get default delivery address for user
+     * In production, this would fetch from user preferences or address book
+     */
+    private fun getDefaultDeliveryAddress(userId: String): String {
+        // For now, return a placeholder that indicates address selection is needed
+        return "Address selection required - Please update in order details"
     }
 }
 

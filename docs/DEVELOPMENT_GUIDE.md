@@ -401,10 +401,12 @@ adb shell am start -n com.rio.rostry/.MainActivity
 ## 📚 Resources
 
 ### Documentation
-- [Project Blueprint](PROJECT_BLUEPRINT.md)
 - [API Documentation](API_DOCUMENTATION.md)
 - [Database Schema](DATABASE_SCHEMA.md)
 - [Architecture Overview](ARCHITECTURE_SNAPSHOT.md)
+- [Farm Management System](FARM_MANAGEMENT_SYSTEM.md)
+- [Lineage Tracking Implementation](LINEAGE_TRACKING_IMPLEMENTATION.md)
+- [Navigation Flow](NAVIGATION_FLOW.md)
 
 ### External Resources
 - [Android Developer Guide](https://developer.android.com)

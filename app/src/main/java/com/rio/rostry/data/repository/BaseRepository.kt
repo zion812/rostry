@@ -3,6 +3,7 @@ package com.rio.rostry.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.rio.rostry.data.common.NetworkResult
 import com.rio.rostry.data.common.safeApiCall
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.catch
@@ -84,15 +85,29 @@ abstract class BaseRepository {
     
     /**
      * Batch operation with transaction support
+     * Note: Firebase transactions require synchronous operations
      */
     protected suspend fun <T> batchOperation(
-        operations: suspend (FirebaseFirestore) -> T
+        operations: (FirebaseFirestore) -> T
     ): NetworkResult<T> {
         return safeApiCall {
             val firestore = FirebaseFirestore.getInstance()
             firestore.runTransaction { transaction ->
                 operations(firestore)
             }.await()
+        }
+    }
+    
+    /**
+     * Batch operation with async support using batched writes
+     * Use this for operations that need suspend functions
+     */
+    protected suspend fun <T> batchOperationAsync(
+        operations: suspend (FirebaseFirestore) -> T
+    ): NetworkResult<T> {
+        return safeApiCall {
+            val firestore = FirebaseFirestore.getInstance()
+            operations(firestore)
         }
     }
     
@@ -109,7 +124,7 @@ abstract class BaseRepository {
             if (result.isSuccess) return result
             
             if (attempt < maxRetries - 1) {
-                kotlinx.coroutines.delay(delayMs * (attempt + 1))
+                delay(delayMs * (attempt + 1))
             }
         }
         

@@ -14,21 +14,8 @@ import com.rio.rostry.ui.theme.*
  * Provides consistent spacing, grid layouts, and component sizing
  */
 
-@Composable
-fun AdaptiveGrid(
-    windowSizeClass: WindowSizeClass,
-    modifier: Modifier = Modifier,
-    content: @Composable (columns: Int, spacing: androidx.compose.ui.unit.Dp) -> Unit
-) {
-    val (columns, spacing) = when (windowSizeClass.widthSizeClass) {
-        WindowWidthSizeClass.Compact -> RostryGrid.compactColumns to RostryGrid.compactSpacing
-        WindowWidthSizeClass.Medium -> RostryGrid.mediumColumns to RostryGrid.mediumSpacing
-        WindowWidthSizeClass.Expanded -> RostryGrid.expandedColumns to RostryGrid.expandedSpacing
-        else -> RostryGrid.compactColumns to RostryGrid.compactSpacing
-    }
-
-    content(columns, spacing)
-}
+// AdaptiveGrid function moved to ResponsiveLayout.kt to avoid conflicts
+// Use the AdaptiveGrid from ResponsiveLayout.kt instead
 
 @Composable
 fun AdaptiveContentPadding(

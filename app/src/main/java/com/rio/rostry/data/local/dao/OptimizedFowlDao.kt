@@ -6,15 +6,25 @@ import com.rio.rostry.data.model.Fowl
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Optimized FowlDao with performance improvements
+ * Optimized FowlDao with performance improvements and pagination support
+ * 
+ * This DAO provides high-performance data access with:
+ * - Pagination support for large datasets
+ * - Optimized queries with proper indexing
+ * - Lightweight data models for UI performance
+ * - Full-text search capabilities
+ * - Batch operations for better throughput
  */
 @Dao
 interface OptimizedFowlDao {
     
-    // ==================== OPTIMIZED QUERIES ====================
+    // ==================== PAGINATED QUERIES ====================
     
     /**
-     * Paginated fowl loading for better performance
+     * Paginated fowl loading for better performance with large datasets
+     * 
+     * @param ownerId The ID of the fowl owner
+     * @return PagingSource for efficient data loading
      */
     @Query("""
         SELECT * FROM fowls 
@@ -24,7 +34,14 @@ interface OptimizedFowlDao {
     fun getUserFowlsPaged(ownerId: String): PagingSource<Int, Fowl>
     
     /**
-     * Marketplace fowls with pagination and filtering
+     * Marketplace fowls with pagination and comprehensive filtering
+     * 
+     * @param breed Optional breed filter (partial match)
+     * @param minPrice Optional minimum price filter
+     * @param maxPrice Optional maximum price filter
+     * @param location Optional location filter (partial match)
+     * @param sortBy Sorting option: 'price_asc', 'price_desc', 'date_desc'
+     * @return PagingSource with filtered and sorted results
      */
     @Query("""
         SELECT * FROM fowls 

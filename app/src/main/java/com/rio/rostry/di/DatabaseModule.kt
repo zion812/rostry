@@ -1,7 +1,10 @@
 package com.rio.rostry.di
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.rio.rostry.data.local.RostryDatabase
 import com.rio.rostry.data.local.dao.*
 import dagger.Module
@@ -9,7 +12,30 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
+
+/**
+ * Database query callback for monitoring database operations in debug builds
+ */
+private class DatabaseQueryCallback : RoomDatabase.QueryCallback {
+    override fun onQuery(sqlQuery: String, bindArgs: List<Any?>) {
+        // Only log in debug builds - using try-catch for BuildConfig safety
+        try {
+            val isDebug = Class.forName("com.rio.rostry.BuildConfig")
+                .getField("DEBUG")
+                .getBoolean(null)
+            if (isDebug) {
+                Log.d("RostryDB", "Query: $sqlQuery")
+            }
+        } catch (e: Exception) {
+            // Fallback: assume debug if BuildConfig is not available
+            Log.d("RostryDB", "Query: $sqlQuery")
+        }
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -32,13 +58,38 @@ object DatabaseModule {
             RostryDatabase.MIGRATION_6_7,
             RostryDatabase.MIGRATION_7_8,
             RostryDatabase.MIGRATION_8_9,
-            RostryDatabase.MIGRATION_9_10,
-            RostryDatabase.MIGRATION_10_11,
-            RostryDatabase.MIGRATION_11_12
+            RostryDatabase.MIGRATION_9_10
         )
-        .setQueryCallback(DatabaseQueryCallback(), CoroutineScope(Dispatchers.IO).asExecutor())
+        .apply {
+            // Only add query callback in debug builds - with safe BuildConfig access
+            try {
+                val isDebug = Class.forName("com.rio.rostry.BuildConfig")
+                    .getField("DEBUG")
+                    .getBoolean(null)
+                if (isDebug) {
+                    setQueryCallback(
+                        DatabaseQueryCallback(), 
+                        java.util.concurrent.Executors.newSingleThreadExecutor()
+                    )
+                }
+            } catch (e: Exception) {
+                // BuildConfig not available, skip query callback
+                Log.w("RostryDB", "BuildConfig not available, skipping query callback")
+            }
+        }
         .enableMultiInstanceInvalidation()
-        .fallbackToDestructiveMigration() // Remove in production
+        .addCallback(object : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                Log.i("RostryDB", "Database created successfully")
+            }
+            
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                Log.i("RostryDB", "Database opened successfully")
+            }
+        })
+        // Note: fallbackToDestructiveMigration() removed for production safety
         .build()
     }
     
